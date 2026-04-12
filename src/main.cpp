@@ -3,7 +3,7 @@
 
 #include "E57Exception.h"
 #include "E57Format.h"
-#include "E57FormatUtils.h"
+#include "E57SimpleData.h"
 
 using namespace emscripten;
 using namespace e57;
@@ -71,11 +71,6 @@ EMSCRIPTEN_BINDINGS(e57) {
         .function("equals", &ImageFile::operator==)
         .function("notEquals", &ImageFile::operator!=);
 
-    function("CreateImageFile", 
-        select_overload<ImageFile(const char*, uint64_t, ReadChecksumPolicy)>(&CreateImageFile), allow_raw_pointers());
-    function("CreateImageFile", 
-        select_overload<ImageFile(const ustring&, const ustring&, ReadChecksumPolicy)>(&CreateImageFile), allow_raw_pointers());
-    
     class_<Node>("Node")
         .function("type", &Node::type)
         .function("isRoot", &Node::isRoot)
@@ -104,11 +99,6 @@ EMSCRIPTEN_BINDINGS(e57) {
         .function("isAttached", &StructureNode::isAttached)
         .function("checkInvariant", &StructureNode::checkInvariant);
 
-    function("CreateStructureNode", 
-        select_overload<StructureNode(const Node&)>(&CreateStructureNode));
-    function("CreateStructureNode", 
-        select_overload<StructureNode(const ImageFile&)>(&CreateStructureNode));
-
     class_<VectorNode>("VectorNode")
         .constructor<const ImageFile&, bool>()
         .constructor<const Node&>()
@@ -128,11 +118,6 @@ EMSCRIPTEN_BINDINGS(e57) {
         .function("isAttached", &VectorNode::isAttached)
         .function("checkInvariant", &VectorNode::checkInvariant);
 
-    function("CreateVectorNode", 
-        select_overload<VectorNode(const Node&)>(&CreateVectorNode));
-    function("CreateVectorNode", 
-        select_overload<VectorNode(const ImageFile&, bool)>(&CreateVectorNode));
-
     class_<SourceDestBuffer>("SourceDestBuffer")
         .function("pathName", &SourceDestBuffer::pathName)
         .function("capacity", &SourceDestBuffer::capacity)
@@ -140,50 +125,6 @@ EMSCRIPTEN_BINDINGS(e57) {
         .function("doScaling", &SourceDestBuffer::doScaling)
         .function("stride", &SourceDestBuffer::stride)
         .function("checkInvariant", &SourceDestBuffer::checkInvariant);
-
-    function("CreateSourceDestBuffer", 
-        select_overload<SourceDestBuffer(const ImageFile&, const ustring&, int8_t*,
-                        size_t, bool, bool,
-                        size_t)>(&CreateSourceDestBuffer));
-    function("CreateSourceDestBuffer", 
-        select_overload<SourceDestBuffer(const ImageFile&, const ustring&, uint8_t*,
-                        size_t, bool, bool,
-                        size_t)>(&CreateSourceDestBuffer));
-    function("CreateSourceDestBuffer", 
-        select_overload<SourceDestBuffer(const ImageFile&, const ustring&, int16_t*,
-                        size_t, bool, bool,
-                        size_t)>(&CreateSourceDestBuffer));
-    function("CreateSourceDestBuffer", 
-        select_overload<SourceDestBuffer(const ImageFile&, const ustring&, uint16_t*,
-                        size_t, bool, bool,
-                        size_t)>(&CreateSourceDestBuffer));
-    function("CreateSourceDestBuffer", 
-        select_overload<SourceDestBuffer(const ImageFile&, const ustring&, int32_t*,
-                        size_t, bool, bool,
-                        size_t)>(&CreateSourceDestBuffer));
-    function("CreateSourceDestBuffer", 
-        select_overload<SourceDestBuffer(const ImageFile&, const ustring&, uint32_t*,
-                        size_t, bool, bool,
-                        size_t)>(&CreateSourceDestBuffer));
-    function("CreateSourceDestBuffer", 
-        select_overload<SourceDestBuffer(const ImageFile&, const ustring&, int64_t*,
-                        size_t, bool, bool,
-                        size_t)>(&CreateSourceDestBuffer));
-    function("CreateSourceDestBuffer", 
-        select_overload<SourceDestBuffer(const ImageFile&, const ustring&, bool*,
-                        size_t, bool, bool,
-                        size_t)>(&CreateSourceDestBuffer));
-    function("CreateSourceDestBuffer", 
-        select_overload<SourceDestBuffer(const ImageFile&, const ustring&, float*,
-                        size_t, bool, bool,
-                        size_t)>(&CreateSourceDestBuffer));
-    function("CreateSourceDestBuffer", 
-        select_overload<SourceDestBuffer(const ImageFile&, const ustring&, double*,
-                        size_t, bool, bool,
-                        size_t)>(&CreateSourceDestBuffer));
-    function("CreateSourceDestBuffer", 
-        select_overload<SourceDestBuffer(const ImageFile&, const ustring&,
-                        std::vector<ustring>*)>(&CreateSourceDestBuffer));
 
     class_<CompressedVectorReader>("CompressedVectorReader")
         .function("read", 
@@ -203,8 +144,6 @@ EMSCRIPTEN_BINDINGS(e57) {
         .function("checkInvariant", &CompressedVectorWriter::checkInvariant);
 
     class_<CompressedVectorNode>("CompressedVectorNode")
-        .constructor<const ImageFile&, const Node&, const VectorNode&>()
-        .constructor<const Node&>()
         .function("childCount", &CompressedVectorNode::childCount)
         .function("prototype", &CompressedVectorNode::prototype)
         .function("codecs", &CompressedVectorNode::codecs)
@@ -232,10 +171,6 @@ EMSCRIPTEN_BINDINGS(e57) {
         .function("checkInvariant", &IntegerNode::checkInvariant);
 
     class_<ScaledIntegerNode>("ScaledIntegerNode")
-        .constructor<const ImageFile&, int64_t, int64_t, int64_t, double, double>()
-        .constructor<const ImageFile&, int, int64_t, int64_t, double, double>()
-        .constructor<const ImageFile&, int, int, int, double, double>()
-        .constructor<const ImageFile&, double, double, double, double, double>()
         .function("rawValue", &ScaledIntegerNode::rawValue)
         .function("scaledValue", &ScaledIntegerNode::scaledValue)
         .function("minimum", &ScaledIntegerNode::minimum)
@@ -253,8 +188,6 @@ EMSCRIPTEN_BINDINGS(e57) {
         .function("checkInvariant", &ScaledIntegerNode::checkInvariant);
 
     class_<FloatNode>("FloatNode")
-        .constructor<const ImageFile&, double, FloatPrecision, double, double>()
-        .constructor<const Node&>()
         .function("value", &FloatNode::value)
         .function("precision", &FloatNode::precision)
         .function("minimum", &FloatNode::minimum)
@@ -268,8 +201,6 @@ EMSCRIPTEN_BINDINGS(e57) {
         .function("checkInvariant", &FloatNode::checkInvariant);
 
     class_<StringNode>("StringNode")
-        .constructor<const ImageFile&, const ustring&>()
-        .constructor<const Node&>()
         .function("value", &StringNode::value)
         .function("isRoot", &StringNode::isRoot)
         .function("parent", &StringNode::parent)
@@ -280,8 +211,6 @@ EMSCRIPTEN_BINDINGS(e57) {
         .function("checkInvariant", &FloatNode::checkInvariant);
 
     class_<BlobNode>("BlobNode")
-        .constructor<const ImageFile&, int64_t>()
-        .constructor<const Node&>()
         .function("byteCount", &BlobNode::byteCount)
         .function("read", &BlobNode::read, allow_raw_pointers())
         .function("write", &BlobNode::write, allow_raw_pointers())
@@ -406,5 +335,61 @@ EMSCRIPTEN_BINDINGS(e57) {
         .value("E57_ERROR_INVARIANCE_VIOLATION", ErrorCode::E57_ERROR_INVARIANCE_VIOLATION);
 
     function("errorCodeToString", &Utilities::errorCodeToString);
+
+    // Binding E57SimpleData.h
+    class_<Translation>("Translation")
+        .property("x", &Translation::x)
+        .property("y", &Translation::y)
+        .property("z", &Translation::z)
+        .function("equals", &Translation::operator==)
+        .function("notEquals", &Translation::operator!=)
+        .class_function("identity", &Translation::identity);
+
+    class_<Quaternion>("Quaternion")
+        .property("w", &Quaternion::w)
+        .property("x", &Quaternion::x)
+        .property("y", &Quaternion::y)
+        .property("z", &Quaternion::z)
+        .function("equals", &Quaternion::operator==)
+        .function("notEquals", &Quaternion::operator!=)
+        .class_function("identity", &Quaternion::identity);
+
+    class_<RigidBodyTransform>("RigidBodyTransform")
+        .property("rotation", &RigidBodyTransform::rotation)
+        .property("translation", &RigidBodyTransform::translation)
+        .function("equals", &RigidBodyTransform::operator==)
+        .function("notEquals", &RigidBodyTransform::operator!=)
+        .class_function("identity", &RigidBodyTransform::identity);
+
+    class_<CartesianBounds>("CartesianBounds")
+        .property("xMinimum", &CartesianBounds::xMinimum)
+        .property("xMaximum", &CartesianBounds::xMaximum)
+        .property("yMinimum", &CartesianBounds::yMinimum)
+        .property("yMaximum", &CartesianBounds::yMaximum)
+        .property("zMinimum", &CartesianBounds::zMinimum)
+        .property("zMaximum", &CartesianBounds::zMaximum)
+        .function("equals", &CartesianBounds::operator==)
+        .function("notEquals", &CartesianBounds::operator!=);
+
+    class_<SphericalBounds>("SphericalBounds")
+        .constructor<>()
+        .property("rangeMinimum", &SphericalBounds::rangeMinimum)
+        .property("rangeMaximum", &SphericalBounds::rangeMaximum)
+        .property("elevationMinimum", &SphericalBounds::elevationMinimum)
+        .property("elevationMaximum", &SphericalBounds::elevationMaximum)
+        .property("azimuthStart", &SphericalBounds::azimuthStart)
+        .property("azimuthEnd", &SphericalBounds::azimuthEnd)
+        .function("equals", &SphericalBounds::operator==)
+        .function("notEquals", &SphericalBounds::operator!=);
+
+    class_<IndexBounds>("IndexBounds")
+        .property("rowMinimum", &IndexBounds::rowMinimum)
+        .property("rowMaximum", &IndexBounds::rowMaximum)
+        .property("columnMinimum", &IndexBound::columnMinimum)
+        .property("columnMaximum", &IndexBound::columnMaximum)
+        .property("returnMinimum", &IndexBounds::returnMinimum)
+        .property("returnMaximum", &IndexBounds::returnMaximum)
+        .function("equals", &IndexBounds::operator==)
+        .function("notEquals", &IndexBounds::operator!=);
 
 }
