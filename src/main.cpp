@@ -385,11 +385,107 @@ EMSCRIPTEN_BINDINGS(e57) {
     class_<IndexBounds>("IndexBounds")
         .property("rowMinimum", &IndexBounds::rowMinimum)
         .property("rowMaximum", &IndexBounds::rowMaximum)
-        .property("columnMinimum", &IndexBound::columnMinimum)
-        .property("columnMaximum", &IndexBound::columnMaximum)
+        .property("columnMinimum", &IndexBounds::columnMinimum)
+        .property("columnMaximum", &IndexBounds::columnMaximum)
         .property("returnMinimum", &IndexBounds::returnMinimum)
         .property("returnMaximum", &IndexBounds::returnMaximum)
         .function("equals", &IndexBounds::operator==)
         .function("notEquals", &IndexBounds::operator!=);
+
+    class_<IntensityLimits>("IntensityLimits")
+        .property("intensityMinimum", &IntensityLimits::intensityMinimum)
+        .property("intensityMaximum", &IntensityLimits::intensityMaximum)
+        .function("equals", &IntensityLimits::operator==)
+        .function("notEquals", &IntensityLimits::operator!=);
+
+    class_<ColorLimits>("ColorLimits")
+        .property("colorRedMinimum", &ColorLimits::colorRedMinimum)
+        .property("colorRedMaximum", &ColorLimits::colorRedMaximum)
+        .property("colorGreenMinimum", &ColorLimits::colorGreenMinimum)
+        .property("colorGreenMaximum", &ColorLimits::colorGreenMaximum)
+        .property("colorBlueMinimum", &ColorLimits::colorBlueMinimum)
+        .property("colorBlueMaximum", &ColorLimits::colorBlueMaximum)
+        .function("equals", &ColorLimits::operator==)
+        .function("notEquals", &ColorLimits::operator!=);
+
+    class_<DateTime>("DateTime")
+        .property("dateTimeValue", &DateTime::dateTimeValue)
+        .property("isAtomicClockReferenced", &DateTime::isAtomicClockReferenced)
+        .function("equals", &DateTime::operator==)
+        .function("notEquals", &DateTime::operator!=);
+
+    class_<E57Root>("E57Root")
+        .property("formatName", &E57Root::formatName)
+        .property("guid", &E57Root::guid)
+        .property("versionMajor", &E57Root::versionMajor)
+        .property("versionMinor", &E57Root::versionMinor)
+        .property("e57LibraryVersion", &E57Root::e57LibraryVersion)
+        .property("creationDateTime", &E57Root::creationDateTime)
+        .property("data3DSize", &E57Root::data3DSize)
+        .property("images2DSize", &E57Root::images2DSize)
+        .property("coordinateMetadata", &E57Root::coordinateMetadata);
+    
+    class_<LineGroupRecord>("LineGroupRecord")
+        .property("idElementValue", &LineGroupRecord::idElementValue)
+        .property("startPointIndex", &LineGroupRecord::startPointIndex)
+        .property("pointCount", &LineGroupRecord::pointCount)
+        .property("cartesianBounds", &LineGroupRecord::cartesianBounds)
+        .property("sphericalBounds", &LineGroupRecord::sphericalBounds);
+
+    class_<GroupingByLine>("GroupingByLine")
+        .property("idElementName", &GroupingByLine::idElementName)
+        .property("groupsSize", &GroupingByLine::groupsSize)
+        .property("pointCountSize", &GroupingByLine::pointCountSize);
+
+    class_<PointGroupingSchemes>("PointGroupingSchemes")
+        .property("groupingByLine", &PointGroupingSchemes::groupingByLine);
+
+    enum_<NumericalNodeType>("NumericalNodeType", enum_value_type::number)
+        .value("Integer", NumericalNodeType::Integer)
+        .value("ScaledInteger", NumericalNodeType::ScaledInteger)
+        .value("Float", NumericalNodeType::Float)
+        .value("Double", NumericalNodeType::Double);
+
+    class_<PointStandardizedFieldsAvailable>("PointStandardizedFieldsAvailable")
+        .property("cartesianXField", &PointStandardizedFieldsAvailable::cartesianXField)
+        .property("cartesianYField", &PointStandardizedFieldsAvailable::cartesianYField)
+        .property("cartesianZField", &PointStandardizedFieldsAvailable::cartesianZField)
+        .property("cartesianInvalidStateField", &PointStandardizedFieldsAvailable::cartesianInvalidStateField)
+        .property("sphericalRangeField", &PointStandardizedFieldsAvailable::sphericalRangeField)
+        .property("sphericalAzimuthField", &PointStandardizedFieldsAvailable::sphericalAzimuthField)
+        .property("sphericalElevationField", &PointStandardizedFieldsAvailable::sphericalElevationField)
+        .property("sphericalInvalidStateField", &PointStandardizedFieldsAvailable::sphericalInvalidStateField)
+        .property("pointRangeMinimum", &PointStandardizedFieldsAvailable::pointRangeMinimum)
+        .property("pointRangeMaximum", &PointStandardizedFieldsAvailable::pointRangeMaximum)
+        .property("pointRangeNodeType", &PointStandardizedFieldsAvailable::pointRangeNodeType)
+        .property("pointRangeScale", &PointStandardizedFieldsAvailable::pointRangeScale)
+        .property("angleMinimum", &PointStandardizedFieldsAvailable::angleMinimum)
+        .property("angleMaximum", &PointStandardizedFieldsAvailable::angleMaximum)
+        .property("angleNodeType", &PointStandardizedFieldsAvailable::angleNodeType)
+        .property("angleScale", &PointStandardizedFieldsAvailable::angleScale)
+        .property("rowIndexField", &PointStandardizedFieldsAvailable::rowIndexField)
+        .property("rowIndexMaximum", &PointStandardizedFieldsAvailable::rowIndexMaximum)
+        .property("columnIndexField", &PointStandardizedFieldsAvailable::columnIndexField)
+        .property("columnIndexMaximum", &PointStandardizedFieldsAvailable::columnIndexMaximum)
+        .property("returnIndexField", &PointStandardizedFieldsAvailable::returnIndexField)
+        .property("returnCountField", &PointStandardizedFieldsAvailable::returnCountField)
+        .property("returnMaximum", &PointStandardizedFieldsAvailable::returnMaximum)
+        .property("timeStampField", &PointStandardizedFieldsAvailable::timeStampField)
+        .property("isTimeStampInvalidField", &PointStandardizedFieldsAvailable::isTimeStampInvalidField)
+        .property("timeMinimum", &PointStandardizedFieldsAvailable::timeMinimum)
+        .property("timeMaximum", &PointStandardizedFieldsAvailable::timeMaximum)
+        .property("timeNodeType", &PointStandardizedFieldsAvailable::timeNodeType)
+        .property("timeScale", &PointStandardizedFieldsAvailable::timeScale)
+        .property("intensityField", &PointStandardizedFieldsAvailable::intensityField)
+        .property("isIntensityInvalidField", &PointStandardizedFieldsAvailable::isIntensityInvalidField)
+        .property("intensityNodeType", &PointStandardizedFieldsAvailable::intensityNodeType)
+        .property("intensityScale", &PointStandardizedFieldsAvailable::intensityScale)
+        .property("colorRedField", &PointStandardizedFieldsAvailable::colorRedField)
+        .property("colorGreenField", &PointStandardizedFieldsAvailable::colorGreenField)
+        .property("colorBlueField", &PointStandardizedFieldsAvailable::colorBlueField)
+        .property("isColorInvalidField", &PointStandardizedFieldsAvailable::isColorInvalidField)
+        .property("normalXField", &PointStandardizedFieldsAvailable::normalXField)
+        .property("normalYField", &PointStandardizedFieldsAvailable::normalYField)
+        .property("normalZField", &PointStandardizedFieldsAvailable::normalZField);
 
 }
