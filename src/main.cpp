@@ -4,6 +4,10 @@
 #include "E57Exception.h"
 #include "E57Format.h"
 #include "E57SimpleData.h"
+#include "E57SimpleDataExtensions.h"
+#include "E57SimpleReader.h"
+
+#include "e57.h"
 
 using namespace emscripten;
 using namespace e57;
@@ -595,4 +599,32 @@ EMSCRIPTEN_BINDINGS(e57) {
         .value("E57_PINHOLE", Image2DProjection::E57_PINHOLE)
         .value("E57_SPHERICAL", Image2DProjection::E57_SPHERICAL)
         .value("E57_CYLINDRICAL", Image2DProjection::E57_CYLINDRICAL);
+
+    class_<Extension::PinholeCameraDistortion>("PinholeCameraDistortion")
+        .property("cameraNumber", &Extension::PinholeCameraDistortion::cameraNumber)
+        .property("type", &Extension::PinholeCameraDistortion::type)
+        .property("CV_K1", &Extension::PinholeCameraDistortion::CV_K1)
+        .property("CV_K2", &Extension::PinholeCameraDistortion::CV_K2)
+        .property("CV_K3", &Extension::PinholeCameraDistortion::CV_K3)
+        .property("CV_K4", &Extension::PinholeCameraDistortion::CV_K4)
+        .property("CV_K5", &Extension::PinholeCameraDistortion::CV_K5)
+        .property("CV_K6", &Extension::PinholeCameraDistortion::CV_K6)
+        .property("CV_P1", &Extension::PinholeCameraDistortion::CV_P1)
+        .property("CV_P2", &Extension::PinholeCameraDistortion::CV_P2)
+        .property("CV_CX", &Extension::PinholeCameraDistortion::CV_CX)
+        .property("CV_CY", &Extension::PinholeCameraDistortion::CV_CY)
+        .property("CV_FX", &Extension::PinholeCameraDistortion::CV_FX)
+        .property("CV_FY", &Extension::PinholeCameraDistortion::CV_FY)
+        .property("CV_HEIGHT", &Extension::PinholeCameraDistortion::CV_HEIGHT)
+        .property("CV_WIDTH", &Extension::PinholeCameraDistortion::CV_WIDTH);
+
+    value_object<ReaderOptions>("ReaderOptions")
+        .field("checksumPolicy", &ReaderOptions::checksumPolicy);
+
+    class_<E57>("E57")
+        .constructor<const std::string&>()
+        .function("GetData3DHeader", &E57::GetData3DHeader)
+        .function("GetHeader", &E57::GetHeader)
+        .function("GetData3DCount", &E57::GetData3DCount)
+        .function("GetImage2DCount", &E57::GetImage2DCount);
 }
