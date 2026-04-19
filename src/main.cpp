@@ -621,10 +621,36 @@ EMSCRIPTEN_BINDINGS(e57) {
     value_object<ReaderOptions>("ReaderOptions")
         .field("checksumPolicy", &ReaderOptions::checksumPolicy);
 
+    class_<Point>("Point")
+        .property("cartesianX", &Point::cartesianX)
+        .property("cartesianY", &Point::cartesianX)
+        .property("cartesianZ", &Point::cartesianZ)
+        .property("cartesianInvalidState", &Point::cartesianInvalidState)
+        .property("intensity", &Point::intensity)
+        .property("isIntensityInvalid", &Point::isIntensityInvalid)
+        .property("colorRed", &Point::colorRed)
+        .property("colorGreen", &Point::colorGreen)
+        .property("colorBlue", &Point::colorBlue)
+        .property("isColorInvalid", &Point::isColorInvalid)
+        .property("sphericalRange", &Point::sphericalRange)
+        .property("sphericalAzimuth", &Point::sphericalAzimuth)
+        .property("sphericalElevation", &Point::sphericalElevation)
+        .property("rowIndex", &Point::rowIndex)
+        .property("columnIndex", &Point::columnIndex)
+        .property("returnIndex", &Point::returnIndex)
+        .property("timeStamp", &Point::timeStamp)
+        .property("isTimeStampInvalid", &Point::isTimeStampInvalid)
+        .property("normalX", &Point::normalX)
+        .property("normalY", &Point::normalY)
+        .property("normalZ", &Point::normalZ);
+
     class_<E57>("E57")
         .constructor<const std::string&>()
         .function("GetData3DHeader", &E57::GetData3DHeader)
         .function("GetHeader", &E57::GetHeader)
         .function("GetData3DCount", &E57::GetData3DCount)
-        .function("GetImage2DCount", &E57::GetImage2DCount);
+        .function("GetImage2DCount", &E57::GetImage2DCount)
+        .function("ReadData", &E57::ReadData);
+
+    register_vector<Point>("VectorPoint");
 }
