@@ -1,0 +1,13 @@
+{
+  "type": "module",
+  "name": "e57-js",
+  "version": "1.0.0",
+  "devDependencies": {
+    "tsup": "^8.5.1",
+    "typescript": "^6.0.3"
+  },
+  "dependencies": {
+    "fs-extra": "^11.3.4",
+    "ws": "^8.20.0"
+  }
+}
