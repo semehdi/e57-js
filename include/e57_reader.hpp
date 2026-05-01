@@ -7,15 +7,15 @@
 
 #include "E57SimpleReader.h"
 #include "E57SimpleData.h"
-#include "point.h"
-#include "image_header.h"
+#include "point.hpp"
+#include "image_header.hpp"
 
 using namespace e57;
 
-class E57
+class E57Reader
 {
 public:
-    E57(const std::string& filePath);
+    E57Reader(const std::string& filePath);
 
     E57Root GetHeader();
     int64_t GetData3DCount();
@@ -25,8 +25,8 @@ public:
     std::vector<Point> ReadScan(int64_t scanIdx, int64_t ptsSize);
     emscripten::val ReadImage(int64_t imageIdx);
     void ResetScanReader(int64_t scanIdx);
-
-    ~E57();
+ 
+    ~E57Reader();
 
 private:
     Reader* mReader;

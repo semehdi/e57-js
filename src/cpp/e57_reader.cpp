@@ -1,25 +1,25 @@
-#include "e57.h"
-#include "image_header.h"
+#include "e57_reader.hpp"
+#include "image_header.hpp"
 
-E57::E57(const std::string& filePath) {
+E57Reader::E57Reader(const std::string& filePath) {
     this->mReader = new Reader(filePath);
 }
 
-E57Root E57::GetHeader()
+E57Root E57Reader::GetHeader()
 {
     E57Root e57Root;
     this->mReader->GetE57Root(e57Root);
     return e57Root;
 }
 
-Data3D E57::GetData3DHeader(int64_t dataIdx)
+Data3D E57Reader::GetData3DHeader(int64_t dataIdx)
 {
     Data3D data3DHeader;
     this->mReader->ReadData3D(dataIdx, data3DHeader);
     return data3DHeader;
 }
 
-ImageHeader E57::GetImage2DHeader(int64_t imageIdx)
+ImageHeader E57Reader::GetImage2DHeader(int64_t imageIdx)
 {
     Image2D image2d;
     this->mReader->ReadImage2D(imageIdx, image2d);
@@ -40,17 +40,17 @@ ImageHeader E57::GetImage2DHeader(int64_t imageIdx)
     return imageHeader;
 }
 
-int64_t E57::GetData3DCount()
+int64_t E57Reader::GetData3DCount()
 {
     return this->mReader->GetData3DCount();
 }
 
-int64_t E57::GetImage2DCount()
+int64_t E57Reader::GetImage2DCount()
 {
     return this->mReader->GetImage2DCount();
 }
 
-std::vector<Point> E57::ReadScan(int64_t scanIdx, int64_t ptsSize)
+std::vector<Point> E57Reader::ReadScan(int64_t scanIdx, int64_t ptsSize)
 {
     std::vector<Point> pts = std::vector<Point>();
 
@@ -93,45 +93,54 @@ std::vector<Point> E57::ReadScan(int64_t scanIdx, int64_t ptsSize)
     return pts;
 }
 
-emscripten::val E57::ReadImage(int64_t imageIdx)
+emscripten::val E57Reader::ReadImage(int64_t imageIdx)
 {
     Image2DProjection imageProjection;
     Image2DType imageType;
     int64_t imageWidth, imageHeight, imageSize;
     Image2DType imageMaskType, imageVisualType;
+    
     bool isSucess = this->mReader->GetImage2DSizes(imageIdx, imageProjection, imageType, 
         imageWidth, imageHeight, imageSize, imageMaskType, imageVisualType);
     uint8_t* imageData = new uint8_t[imageSize];
     this->mReader->ReadImage2DData(imageIdx, imageProjection, imageType, imageData, 0, imageSize);
-    return emscripten::val(emscripten::typed_memory_view(imageSize, imageData));;
+
+    emscripten::val jsImageArray = emscripten::val::global("Uint8Array").new_(imageSize);
+    emscripten::val::global("Uint8Array").call<emscripten::val>("from",
+        emscripten::val(emscripten::typed_memory_view(imageSize, imageData))
+    );
+
+    delete[] imageData;
+
+    return jsImageArray;
 }
 
-void E57::MakeScanReader(int64_t scanIdx, int64_t chunkSize)
+void E57Reader::MakeScanReader(int64_t scanIdx, int64_t chunkSize)
 {
     Data3D scanHeader = this->GetData3DHeader(scanIdx);
     this->mScanDataPoints[scanIdx] = new Data3DPointsDouble(scanHeader);
     this->mScanReaders[scanIdx] = this->mReader->SetUpData3DPointsData(scanIdx, chunkSize, *this->mScanDataPoints[scanIdx]);
 }
 
-void E57::ResetScanReader(int64_t scanIdx)
+void E57Reader::ResetScanReader(int64_t scanIdx)
 {
     this->DestroyScanReader(scanIdx);
     this->mReadPtsCount = 0;
 }
 
-bool E57::IsReaderValid(int64_t scanIdx)
+bool E57Reader::IsReaderValid(int64_t scanIdx)
 {
     Data3DPointsDouble* pointsDataPtr = this->mScanDataPoints[scanIdx];
     return pointsDataPtr != nullptr;
 }
 
-void E57::DestroyScanReader(int64_t scanIdx)
+void E57Reader::DestroyScanReader(int64_t scanIdx)
 {
     if (this->mScanDataPoints[scanIdx] != nullptr) delete this->mScanDataPoints[scanIdx];
     this->mScanReaders[scanIdx]->close();
 }
 
-E57::~E57()
+E57Reader::~E57Reader()
 {
     if (this->mReader->IsOpen()) this->mReader->Close();
     delete this->mReader;

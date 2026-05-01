@@ -19,7 +19,7 @@ export class E57Scan {
     {
         var scanHeader = this.GetHeader();
         var scanPtsCount = scanHeader.pointCount;
-        return this.e57Reader.ReadPoints(this.scanIdx, scanPtsCount);
+        return this.ReadPoints(scanPtsCount);
     }
 
     ReadPoints(ptsCount)
@@ -36,7 +36,7 @@ export class E57Scan {
         var chunks = Math.ceil(scanPtsCount / chunkSize);
         for (var iChunk = 0; iChunk < chunks; iChunk++)
         {
-            var readPromise = this.ReadPoints(this.scanIdx, chunkSize);
+            var readPromise = this.ReadPoints(chunkSize);
             callback(readPromise);
         }
     }
@@ -112,7 +112,7 @@ export class E57Reader {
     {
         const absInputPath = path.resolve(filePath);
         const inputFilePath = path.join(E57Init.RootDir, absInputPath);
-        this.reader = new E57Init.WasmModule.E57(inputFilePath);
+        this.reader = new E57Init.WasmModule.E57Reader(inputFilePath);
 
         var scansCount = this.GetData3DCount();
         this.scans = new Array(scansCount);

@@ -6,9 +6,8 @@
 #include "E57SimpleData.h"
 #include "E57SimpleDataExtensions.h"
 #include "E57SimpleReader.h"
-#include "image_header.h"
-
-#include "e57.h"
+#include "image_header.hpp"
+#include "e57_reader.hpp"
 
 using namespace emscripten;
 using namespace e57;
@@ -653,15 +652,15 @@ EMSCRIPTEN_BINDINGS(e57) {
         .property("normalY", &Point::normalY)
         .property("normalZ", &Point::normalZ);
 
-    class_<E57>("E57")
+    class_<E57Reader>("E57Reader")
         .constructor<const std::string&>()
-        .function("GetData3DHeader", &E57::GetData3DHeader)
-        .function("GetImage2DHeader", &E57::GetImage2DHeader)
-        .function("GetHeader", &E57::GetHeader)
-        .function("GetData3DCount", &E57::GetData3DCount)
-        .function("GetImage2DCount", &E57::GetImage2DCount)
-        .function("ReadScan", &E57::ReadScan)
-        .function("ReadImage", &E57::ReadImage, allow_raw_pointers());
+        .function("GetData3DHeader", &E57Reader::GetData3DHeader)
+        .function("GetImage2DHeader", &E57Reader::GetImage2DHeader)
+        .function("GetHeader", &E57Reader::GetHeader)
+        .function("GetData3DCount", &E57Reader::GetData3DCount)
+        .function("GetImage2DCount", &E57Reader::GetImage2DCount)
+        .function("ReadScan", &E57Reader::ReadScan)
+        .function("ReadImage", &E57Reader::ReadImage, allow_raw_pointers());
 
     register_vector<Point>("VectorPoint");
     register_vector<uint8_t>("Vectoruint_8");

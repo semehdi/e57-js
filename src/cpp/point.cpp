@@ -1,4 +1,4 @@
-#include "point.h"
+#include "point.hpp"
 
 Point::Point(Data3DPointsDouble* pointData, int64_t idx)
 {

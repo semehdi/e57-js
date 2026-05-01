@@ -1,4 +1,4 @@
-#include "image_header.h"
+#include "image_header.hpp"
 
 ImageHeader::ImageHeader(const Image2D& image2D)
 {
