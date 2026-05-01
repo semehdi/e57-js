@@ -16,4 +16,5 @@ public:
     float normalX, normalY, normalZ;
 
     Point(Data3DPointsDouble* pointData, int64_t idx);
+    Point();
 };

@@ -25,3 +25,5 @@ Point::Point(Data3DPointsDouble* pointData, int64_t idx)
     this->sphericalElevation = pointData->sphericalElevation[idx];
     this->sphericalRange = pointData->sphericalRange[idx];
 }
+
+Point::Point() {}

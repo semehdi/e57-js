@@ -22,11 +22,19 @@ public:
     int64_t GetImage2DCount();
     Data3D GetData3DHeader(int64_t dataIdx);
     ImageHeader GetImage2DHeader(int64_t imageIdx);
-    std::vector<Point> ReadScan(int64_t scanIdx);
+    std::vector<Point> ReadScan(int64_t scanIdx, int64_t ptsSize);
     emscripten::val ReadImage(int64_t imageIdx);
+    void ResetScanReader(int64_t scanIdx);
 
     ~E57();
 
 private:
     Reader* mReader;
+    std::unordered_map<int64_t, std::shared_ptr<CompressedVectorReader>> mScanReaders;
+    std::unordered_map<int64_t, Data3DPointsDouble*> mScanDataPoints;
+    int64_t mReadPtsCount = 0;
+
+    void MakeScanReader(int64_t scanIdx, int64_t chunkSize);
+    void DestroyScanReader(int64_t scanIdx);
+    bool IsReaderValid(int64_t scanIdx);
 };

@@ -50,30 +50,46 @@ int64_t E57::GetImage2DCount()
     return this->mReader->GetImage2DCount();
 }
 
-std::vector<Point> E57::ReadScan(int64_t scanIdx)
+std::vector<Point> E57::ReadScan(int64_t scanIdx, int64_t ptsSize)
 {
     std::vector<Point> pts = std::vector<Point>();
-    Data3D scanHeader = this->GetData3DHeader(scanIdx);
-    Data3DPointsDouble* pointsData = new Data3DPointsDouble(scanHeader);
-    CompressedVectorReader dataReader = this->mReader->SetUpData3DPointsData(scanIdx, scanHeader.pointCount, *pointsData);
+
+    if (ptsSize < 0) return pts;
+
+    const Data3D scanHeader = this->GetData3DHeader(scanIdx);
+    const int64_t scanPtsCount = scanHeader.pointCount;
+    
+    if (this->mReadPtsCount >= scanPtsCount || this->mReadPtsCount < 0)
+    {
+        this->ResetScanReader(scanIdx);
+        return pts;
+    }
+
+    ptsSize = std::min(ptsSize, scanPtsCount);
+    ptsSize = std::min(scanPtsCount - this->mReadPtsCount, ptsSize);
+
+    if (!this->IsReaderValid(scanIdx)) 
+        this->MakeScanReader(scanIdx, ptsSize);
+    
+    Data3DPointsDouble* pointsData = this->mScanDataPoints[scanIdx];
+    std::shared_ptr<CompressedVectorReader> dataReader = this->mScanReaders[scanIdx];
+
+    pts.resize(ptsSize);
 
     int64_t count = 0;
     unsigned size = 0;
-    int col = 0;
-    int row = 0;
-    double intensity = 0;
-    uint16_t red = 0, green = 0, blue = 0;
 
-    while (size = dataReader.read())
+    while (size = dataReader->read())
     {
         for (long i = 0; i < size; i++)
         {
             Point pt = Point(pointsData, i);
-            pts.push_back(pt);
-            count++;
+            pts[count++] = pt;
+            this->mReadPtsCount++;
+            if (count >= ptsSize) break;
         }
+        if (count >= ptsSize) break;
     }
-    dataReader.close();
     return pts;
 }
 
@@ -88,6 +104,31 @@ emscripten::val E57::ReadImage(int64_t imageIdx)
     uint8_t* imageData = new uint8_t[imageSize];
     this->mReader->ReadImage2DData(imageIdx, imageProjection, imageType, imageData, 0, imageSize);
     return emscripten::val(emscripten::typed_memory_view(imageSize, imageData));;
+}
+
+void E57::MakeScanReader(int64_t scanIdx, int64_t chunkSize)
+{
+    Data3D scanHeader = this->GetData3DHeader(scanIdx);
+    this->mScanDataPoints[scanIdx] = new Data3DPointsDouble(scanHeader);
+    this->mScanReaders[scanIdx] = this->mReader->SetUpData3DPointsData(scanIdx, chunkSize, *this->mScanDataPoints[scanIdx]);
+}
+
+void E57::ResetScanReader(int64_t scanIdx)
+{
+    this->DestroyScanReader(scanIdx);
+    this->mReadPtsCount = 0;
+}
+
+bool E57::IsReaderValid(int64_t scanIdx)
+{
+    Data3DPointsDouble* pointsDataPtr = this->mScanDataPoints[scanIdx];
+    return pointsDataPtr != nullptr;
+}
+
+void E57::DestroyScanReader(int64_t scanIdx)
+{
+    if (this->mScanDataPoints[scanIdx] != nullptr) delete this->mScanDataPoints[scanIdx];
+    this->mScanReaders[scanIdx]->close();
 }
 
 E57::~E57()

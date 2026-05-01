@@ -1,7 +1,7 @@
-import { E57Reader } from './dist/index.js'
+import { E57Reader, E57Init } from './dist/index.js'
 
-var eFile = new E57Reader();
-await eFile.Open("Station018.e57");
+await E57Init.Init();
 
-console.log("Hello World");
-
+var reader = new E57Reader("Station018.e57");
+var scan = reader.GetScan(0);
+var image = reader.GetImage(0);
