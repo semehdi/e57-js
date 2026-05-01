@@ -31,5 +31,7 @@ public:
       CylindricalRepresentation cylindricalRepresentation;
       Extension::PinholeCameraDistortion pinholeCameraDistortionExt;
 
+      ImageHeader();
       ImageHeader(const Image2D& image2d);
+      Image2D ToImage2D();
 };

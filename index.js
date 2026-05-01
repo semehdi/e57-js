@@ -1,15 +1,15 @@
-import { E57Reader, E57Init } from './dist/index.js'
+import { E57Reader, E57Writer, E57Init } from './dist/index.js'
 
 await E57Init.Init();
 
-var reader = new E57Reader("Station018.e57");
-var scan = reader.GetScan(0);
-var image = reader.GetImage(0);
+var writer = new E57Writer("file.e57");
 
-scan.ReadScan().then((data) => {
-    const ptsCount = scan.GetHeader().pointCount;
-    for (var i = 0; i < ptsCount; i++)
-    {
-        var pt = data.get(i);
-    }
+var imageProjection = E57Init.WasmModule.Image2DProjection.ProjectionVisual;
+var imageType = E57Init.WasmModule.Image2DType.ImageJPEG;
+var imageHeader = new E57Init.WasmModule.ImageHeader();
+var imagePath = "tests/data/images/image_1.jpg";
+
+writer.AddImage(imageHeader, imageType, imageProjection, 0, imagePath).then(() => {
+    console.log("Done !");
+    writer.Close();
 })
