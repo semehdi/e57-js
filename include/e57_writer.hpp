@@ -21,7 +21,9 @@ public:
         Image2DProjection imageProjection, 
         int64_t startPos, 
         const emscripten::val& jsArray, 
-        int64_t byteCount
+        int64_t byteCount,
+        int32_t width,
+        int32_t height
     );
 
     void Close();

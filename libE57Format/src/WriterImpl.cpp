@@ -201,8 +201,6 @@ namespace e57
    {
       StructureNode image( imf_ );
 
-      std::cout << "Passed" << std::endl;
-
       images2D_.append( image );
 
       int64_t pos = images2D_.childCount() - 1;

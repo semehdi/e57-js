@@ -67,7 +67,6 @@ vcpkg_installed/
 # test output & cache
 Testing/
 .cache/
-pump.e57
-Station018.e57
 dist
 node_modules
+*.e57

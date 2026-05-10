@@ -3,7 +3,7 @@ import { E57Init } from "./e57_init.js"
 import path from "path"
 import fs from "fs"
 
-export class E57Scan {
+export class E57ReaderScan {
     constructor(e57Reader, scanIdx)
     {
         this.e57Reader = e57Reader;
@@ -42,7 +42,7 @@ export class E57Scan {
     }
 }
 
-export class E57Image 
+export class E57ReaderImage 
 {
     constructor(e57Reader, imageIdx)
     {
@@ -118,14 +118,14 @@ export class E57Reader {
         this.scans = new Array(scansCount);
         for (var iScan = 0; iScan < scansCount; iScan++)
         {
-            this.scans[iScan] = new E57Scan(this.reader, iScan);
+            this.scans[iScan] = new E57ReaderScan(this.reader, iScan);
         }
 
         var imagesCount = this.GetImage2DCount();
         this.images = new Array(imagesCount);
         for (var iImage = 0; iImage < imagesCount; iImage++)
         {
-            this.images[iImage] = new E57Image(this.reader, iImage);
+            this.images[iImage] = new E57ReaderImage(this.reader, iImage);
         }
     }
 

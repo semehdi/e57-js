@@ -17,6 +17,11 @@ std::string GetVersion_1_0_URI() {
     return VERSION_1_0_URI;
 }
 
+Quaternion* getRotation(RigidBodyTransform& rbt)
+{
+    return &(rbt.rotation);
+}
+
 EMSCRIPTEN_BINDINGS(e57) {
 
     // Binding E57Format.h
@@ -360,8 +365,8 @@ EMSCRIPTEN_BINDINGS(e57) {
         .class_function("identity", &Quaternion::identity);
 
     class_<RigidBodyTransform>("RigidBodyTransform")
-        .property("rotation", &RigidBodyTransform::rotation)
-        .property("translation", &RigidBodyTransform::translation)
+        .property("rotation", &RigidBodyTransform::rotation, return_value_policy::reference())
+        .property("translation", &RigidBodyTransform::translation, return_value_policy::reference())
         .function("equals", &RigidBodyTransform::operator==)
         .function("notEquals", &RigidBodyTransform::operator!=)
         .class_function("identity", &RigidBodyTransform::identity);
@@ -429,20 +434,20 @@ EMSCRIPTEN_BINDINGS(e57) {
         .field("images2DSize", &E57Root::images2DSize)
         .field("coordinateMetadata", &E57Root::coordinateMetadata);
     
-    value_object<LineGroupRecord>("LineGroupRecord")
-        .field("idElementValue", &LineGroupRecord::idElementValue)
-        .field("startPointIndex", &LineGroupRecord::startPointIndex)
-        .field("pointCount", &LineGroupRecord::pointCount)
-        .field("cartesianBounds", &LineGroupRecord::cartesianBounds)
-        .field("sphericalBounds", &LineGroupRecord::sphericalBounds);
+    class_<LineGroupRecord>("LineGroupRecord")
+        .property("idElementValue", &LineGroupRecord::idElementValue)
+        .property("startPointIndex", &LineGroupRecord::startPointIndex)
+        .property("pointCount", &LineGroupRecord::pointCount)
+        .property("cartesianBounds", &LineGroupRecord::cartesianBounds, return_value_policy::reference())
+        .property("sphericalBounds", &LineGroupRecord::sphericalBounds, return_value_policy::reference());
 
     value_object<GroupingByLine>("GroupingByLine")
         .field("idElementName", &GroupingByLine::idElementName)
         .field("groupsSize", &GroupingByLine::groupsSize)
         .field("pointCountSize", &GroupingByLine::pointCountSize);
 
-    value_object<PointGroupingSchemes>("PointGroupingSchemes")
-        .field("groupingByLine", &PointGroupingSchemes::groupingByLine);
+    class_<PointGroupingSchemes>("PointGroupingSchemes")
+        .property("groupingByLine", &PointGroupingSchemes::groupingByLine, return_value_policy::reference());
 
     enum_<NumericalNodeType>("NumericalNodeType", enum_value_type::number)
         .value("Integer", NumericalNodeType::Integer)
@@ -492,31 +497,31 @@ EMSCRIPTEN_BINDINGS(e57) {
         .field("normalYField", &PointStandardizedFieldsAvailable::normalYField)
         .field("normalZField", &PointStandardizedFieldsAvailable::normalZField);
 
-    value_object<Data3D>("Data3D")
-        .field("name", &Data3D::name)
-        .field("guid", &Data3D::guid)
-        .field("originalGuids", &Data3D::originalGuids)
-        .field("description", &Data3D::description)
-        .field("sensorVendor", &Data3D::sensorVendor)
-        .field("sensorModel", &Data3D::sensorModel)
-        .field("sensorSerialNumber", &Data3D::sensorSerialNumber)
-        .field("sensorHardwareVersion", &Data3D::sensorHardwareVersion)
-        .field("sensorSoftwareVersion", &Data3D::sensorSoftwareVersion)
-        .field("sensorFirmwareVersion", &Data3D::sensorFirmwareVersion)
-        .field("temperature", &Data3D::temperature)
-        .field("relativeHumidity", &Data3D::relativeHumidity)
-        .field("atmosphericPressure", &Data3D::atmosphericPressure)
-        .field("acquisitionStart", &Data3D::acquisitionStart)
-        .field("acquisitionEnd", &Data3D::acquisitionEnd)
-        .field("pose", &Data3D::pose)
-        .field("indexBounds", &Data3D::indexBounds)
-        .field("cartesianBounds", &Data3D::cartesianBounds)
-        .field("sphericalBounds", &Data3D::sphericalBounds)
-        .field("intensityLimits", &Data3D::intensityLimits)
-        .field("colorLimits", &Data3D::colorLimits)
-        .field("pointGroupingSchemes", &Data3D::pointGroupingSchemes)
-        .field("pointFields", &Data3D::pointFields)
-        .field("pointCount", &Data3D::pointCount);
+    class_<Data3D>("Data3D")
+        .property("name", &Data3D::name)
+        .property("guid", &Data3D::guid)
+        .property("originalGuids", &Data3D::originalGuids)
+        .property("description", &Data3D::description)
+        .property("sensorVendor", &Data3D::sensorVendor)
+        .property("sensorModel", &Data3D::sensorModel)
+        .property("sensorSerialNumber", &Data3D::sensorSerialNumber)
+        .property("sensorHardwareVersion", &Data3D::sensorHardwareVersion)
+        .property("sensorSoftwareVersion", &Data3D::sensorSoftwareVersion)
+        .property("sensorFirmwareVersion", &Data3D::sensorFirmwareVersion)
+        .property("temperature", &Data3D::temperature)
+        .property("relativeHumidity", &Data3D::relativeHumidity)
+        .property("atmosphericPressure", &Data3D::atmosphericPressure)
+        .property("acquisitionStart", &Data3D::acquisitionStart)
+        .property("acquisitionEnd", &Data3D::acquisitionEnd)
+        .property("pose", &Data3D::pose, return_value_policy::reference())
+        .property("indexBounds", &Data3D::indexBounds, return_value_policy::reference())
+        .property("cartesianBounds", &Data3D::cartesianBounds, return_value_policy::reference())
+        .property("sphericalBounds", &Data3D::sphericalBounds, return_value_policy::reference())
+        .property("intensityLimits", &Data3D::intensityLimits, return_value_policy::reference())
+        .property("colorLimits", &Data3D::colorLimits, return_value_policy::reference())
+        .property("pointGroupingSchemes", &Data3D::pointGroupingSchemes, return_value_policy::reference())
+        .property("pointFields", &Data3D::pointFields, return_value_policy::reference())
+        .property("pointCount", &Data3D::pointCount);
 
     class_<VisualReferenceRepresentation>("VisualReferenceRepresentation")
         .property("jpegImageSize", &VisualReferenceRepresentation::jpegImageSize)
@@ -614,11 +619,11 @@ EMSCRIPTEN_BINDINGS(e57) {
         .property("sensorVendor", &ImageHeader::sensorVendor)
         .property("sensorModel", &ImageHeader::sensorModel)
         .property("sensorSerialNumber", &ImageHeader::sensorSerialNumber)
-        .property("pose", &ImageHeader::pose)
-        .property("visualReferenceRepresentation", &ImageHeader::visualReferenceRepresentation)
-        .property("pinholeRepresentation", &ImageHeader::pinholeRepresentation)
-        .property("cylindricalRepresentation", &ImageHeader::cylindricalRepresentation)
-        .property("pinholeCameraDistortionExt", &ImageHeader::pinholeCameraDistortionExt)
+        .property("pose", &ImageHeader::pose, return_value_policy::reference())
+        .property("visualReferenceRepresentation", &ImageHeader::visualReferenceRepresentation, return_value_policy::reference())
+        .property("pinholeRepresentation", &ImageHeader::pinholeRepresentation, return_value_policy::reference())
+        .property("cylindricalRepresentation", &ImageHeader::cylindricalRepresentation, return_value_policy::reference())
+        .property("pinholeCameraDistortionExt", &ImageHeader::pinholeCameraDistortionExt, return_value_policy::reference())
         .property("imageType", &ImageHeader::imageType)
         .property("imageProjection", &ImageHeader::imageProjection)
         .property("width", &ImageHeader::width)
@@ -627,8 +632,8 @@ EMSCRIPTEN_BINDINGS(e57) {
         .property("imageVisualType", &ImageHeader::imageVisualType)
         .property("imageSize", &ImageHeader::imageSize);
 
-    value_object<ReaderOptions>("ReaderOptions")
-        .field("checksumPolicy", &ReaderOptions::checksumPolicy);
+    class_<ReaderOptions>("ReaderOptions")
+        .property("checksumPolicy", &ReaderOptions::checksumPolicy, return_value_policy::reference());
 
     class_<Point>("Point")
         .property("cartesianX", &Point::cartesianX)
