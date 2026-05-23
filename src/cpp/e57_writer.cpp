@@ -73,33 +73,55 @@ int64_t E57Writer::AddImage(
 }
 
 int64_t E57Writer::AddScan(
-        Data3D header
+        Data3D header,
+        const emscripten::val& ptsArray
     )
 {
-    constexpr int64_t cNumPoints = 1025;
+    std::vector<Point> points = emscripten::vecFromJSArray<Point>(ptsArray);
 
-    header.guid = "Cartesian Points Min/Max Float Header GUID";
-    header.pointCount = cNumPoints;
-    header.pointFields.cartesianXField = true;
-    header.pointFields.cartesianYField = true;
-    header.pointFields.cartesianZField = true;
+    const int64_t numPoints = points.size();
+    header.pointCount = numPoints;
 
-    // Using any of these without setting their min/max explicitly should not fail
-    header.pointFields.pointRangeNodeType = e57::NumericalNodeType::ScaledInteger;
-    header.pointFields.pointRangeScale = 0.1;
-    header.pointFields.timeStampField = true;
-    header.pointFields.timeNodeType = e57::NumericalNodeType::ScaledInteger;
-    header.pointFields.timeScale = 0.1;
+    e57::Data3DPointsDouble pointsData( header );
 
-    e57::Data3DPointsFloat pointsData( header );
-
-    for ( int64_t i = 0; i < cNumPoints; ++i )
+    for ( int64_t iPoint = 0; iPoint < numPoints; ++iPoint )
     {
-        auto floati = static_cast<float>( i );
-        pointsData.cartesianX[i] = floati;
-        pointsData.cartesianY[i] = floati;
-        pointsData.cartesianZ[i] = floati;
-        pointsData.timeStamp[i] = floati;
+        const Point point = points[iPoint];
+
+        std::cout << "++++++++++++++++++++++" << std::endl;
+        std::cout << point.cartesianX << std::endl;
+        std::cout << point.cartesianY << std::endl;
+        std::cout << point.cartesianZ << std::endl;
+
+        pointsData.cartesianX[iPoint] = point.cartesianX;
+        pointsData.cartesianY[iPoint] = point.cartesianY;
+        pointsData.cartesianZ[iPoint] = point.cartesianZ;
+        pointsData.cartesianInvalidState[iPoint] = point.cartesianInvalidState;
+
+        pointsData.timeStamp[iPoint] = point.timeStamp;
+        pointsData.isTimeStampInvalid[iPoint] = point.isTimeStampInvalid;
+
+        pointsData.colorRed[iPoint] = point.colorRed;
+        pointsData.colorGreen[iPoint] = point.colorGreen;
+        pointsData.colorBlue[iPoint] = point.colorBlue;
+        pointsData.isColorInvalid[iPoint] = point.isColorInvalid;
+
+        pointsData.normalX[iPoint] = point.normalX;
+        pointsData.normalY[iPoint] = point.normalY;
+        pointsData.normalZ[iPoint] = point.normalZ;
+
+        pointsData.sphericalAzimuth[iPoint] = point.sphericalAzimuth;
+        pointsData.sphericalElevation[iPoint] = point.sphericalElevation;
+        pointsData.sphericalRange[iPoint] = point.sphericalRange;
+
+        pointsData.returnCount[iPoint] = point.returnCount;
+        pointsData.returnIndex[iPoint] = point.returnIndex;
+
+        pointsData.columnIndex[iPoint] = point.columnIndex;
+        pointsData.rowIndex[iPoint] = point.rowIndex;
+
+        pointsData.intensity[iPoint] = point.intensity;
+        pointsData.isIntensityInvalid[iPoint] = point.isIntensityInvalid;
     }
 
     this->mWriter->WriteData3DData( header, pointsData );

@@ -639,7 +639,7 @@ EMSCRIPTEN_BINDINGS(e57) {
     class_<Point>("Point")
         .constructor<>()
         .property("cartesianX", &Point::cartesianX)
-        .property("cartesianY", &Point::cartesianX)
+        .property("cartesianY", &Point::cartesianY)
         .property("cartesianZ", &Point::cartesianZ)
         .property("cartesianInvalidState", &Point::cartesianInvalidState)
         .property("intensity", &Point::intensity)

@@ -28,7 +28,8 @@ public:
     );
 
     int64_t AddScan(
-        Data3D scanHeader
+        Data3D scanHeader,
+        const emscripten::val& jsArray
     );
 
     void Close();

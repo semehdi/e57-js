@@ -157,7 +157,7 @@ export class E57Writer
 
     AddScan(scanHeader, points)
     {
-        var wBytes = this.writer.AddScan(scanHeader);
+        var wBytes = this.writer.AddScan(scanHeader, points);
     }
 
     Close()
