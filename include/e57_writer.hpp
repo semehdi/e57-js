@@ -7,6 +7,7 @@
 #include "E57SimpleData.h"
 #include <emscripten/bind.h>
 #include <emscripten/val.h>
+#include "point.hpp"
 
 using namespace e57;
 
@@ -24,6 +25,10 @@ public:
         int64_t byteCount,
         int32_t width,
         int32_t height
+    );
+
+    int64_t AddScan(
+        Data3D scanHeader
     );
 
     void Close();

@@ -204,6 +204,8 @@ namespace e57
       header.dump( 4 ); //???
 #endif
 
+      header.verify( imf->file_->length( CheckedFile::Physical ) );
+
 #if VALIDATE_BASIC
       // Verify OK before write it.
       header.verify( imf->file_->length( CheckedFile::Physical ) );

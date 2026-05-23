@@ -72,6 +72,41 @@ int64_t E57Writer::AddImage(
     return wBytes;
 }
 
+int64_t E57Writer::AddScan(
+        Data3D header
+    )
+{
+    constexpr int64_t cNumPoints = 1025;
+
+    header.guid = "Cartesian Points Min/Max Float Header GUID";
+    header.pointCount = cNumPoints;
+    header.pointFields.cartesianXField = true;
+    header.pointFields.cartesianYField = true;
+    header.pointFields.cartesianZField = true;
+
+    // Using any of these without setting their min/max explicitly should not fail
+    header.pointFields.pointRangeNodeType = e57::NumericalNodeType::ScaledInteger;
+    header.pointFields.pointRangeScale = 0.1;
+    header.pointFields.timeStampField = true;
+    header.pointFields.timeNodeType = e57::NumericalNodeType::ScaledInteger;
+    header.pointFields.timeScale = 0.1;
+
+    e57::Data3DPointsFloat pointsData( header );
+
+    for ( int64_t i = 0; i < cNumPoints; ++i )
+    {
+        auto floati = static_cast<float>( i );
+        pointsData.cartesianX[i] = floati;
+        pointsData.cartesianY[i] = floati;
+        pointsData.cartesianZ[i] = floati;
+        pointsData.timeStamp[i] = floati;
+    }
+
+    this->mWriter->WriteData3DData( header, pointsData );
+
+    return 0;
+}
+
 void E57Writer::Close()
 {
     if (this->mWriter != nullptr)

@@ -218,7 +218,12 @@ namespace e57
    {
       _fillMinMaxData( data3DHeader, buffers );
 
+      std::cout << "Hello" << std::endl;
+
       const int64_t scanIndex = impl_->NewData3D( data3DHeader );
+
+      std::cout << "Scan Idx" << " " << scanIndex << std::endl;
+      std::cout << "CartesianX : " << buffers.cartesianX[0] << std::endl;
 
       e57::CompressedVectorWriter dataWriter =
          impl_->SetUpData3DPointsData( scanIndex, data3DHeader.pointCount, buffers );

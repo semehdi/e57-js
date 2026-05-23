@@ -15,5 +15,6 @@ target_link_options(${PROJECT_NAME} PRIVATE
     "-sEXPORTED_FUNCTIONS=['_malloc','_free']"
     "-sEXPORTED_RUNTIME_METHODS=['FS','HEAPU8']"
     "-lnodefs.js"
+    "-sFORCE_FILESYSTEM=1"
     "-sALLOW_MEMORY_GROWTH"
 )
