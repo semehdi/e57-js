@@ -70,3 +70,15 @@ Testing/
 dist
 node_modules
 *.e57
+
+# Images
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.tiff
+*.tif
+*.webp
+*.svg
+*.ico
