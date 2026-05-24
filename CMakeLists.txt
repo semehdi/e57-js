@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.13)
 project(libe57-js)
 set(CMAKE_CXX_STANDARD 17)
+add_compile_options("-pthread")
 add_subdirectory(libE57Format)
 add_executable(${PROJECT_NAME} src/cpp/main.cpp src/cpp/e57_reader.cpp src/cpp/e57_writer.cpp src/cpp/point.cpp src/cpp/image_header.cpp)
 target_link_libraries( ${PROJECT_NAME} PRIVATE E57Format )
@@ -17,4 +18,6 @@ target_link_options(${PROJECT_NAME} PRIVATE
     "-lnodefs.js"
     "-sFORCE_FILESYSTEM=1"
     "-sALLOW_MEMORY_GROWTH"
+    "-pthread"
+    "-sPTHREAD_POOL_SIZE=4"
 )

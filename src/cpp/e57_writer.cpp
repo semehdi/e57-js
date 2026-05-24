@@ -77,16 +77,14 @@ int64_t E57Writer::AddScan(
         const emscripten::val& ptsArray
     )
 {
-    std::vector<Point> points = emscripten::vecFromJSArray<Point>(ptsArray);
-
-    const int64_t numPoints = points.size();
+    const int64_t numPoints = ptsArray["length"].as<int64_t>();
     header.pointCount = numPoints;
 
     e57::Data3DPointsDouble pointsData( header );
 
     for ( int64_t iPoint = 0; iPoint < numPoints; ++iPoint )
     {
-        const Point point = points[iPoint];
+        const Point point = ptsArray[iPoint].as<Point>();
 
         pointsData.cartesianX[iPoint] = point.cartesianX;
         pointsData.cartesianY[iPoint] = point.cartesianY;
@@ -130,6 +128,7 @@ void E57Writer::Close()
     {
         this->mWriter->Close();
         delete this->mWriter;
+        this->mWriter = nullptr;
     }
 }
 

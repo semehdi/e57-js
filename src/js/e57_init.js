@@ -35,7 +35,8 @@ export class E57 {
 
     /**
      * Loads the WebAssembly module, mounts the host filesystem via NODEFS, and
-     * populates `E57.LibE57`.
+     * populates `E57.LibE57`. Safe to call multiple times — resolves immediately
+     * if the module is already initialised.
      *
      * @returns {Promise<void>} Resolves when the module is ready to use.
      *
@@ -44,10 +45,13 @@ export class E57 {
      */
     static Init()
     {
+        if (E57.LibE57 !== null)
+            return Promise.resolve();
+
         return e57().then(function(e57Module) {
             e57Module.FS.mkdir(E57.RootDir);
             e57Module.FS.mount(e57Module.FS.filesystems.NODEFS, {root : '/'}, E57.RootDir);
             E57.LibE57 = e57Module;
-        })
+        });
     }
 }

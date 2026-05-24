@@ -63,14 +63,14 @@ std::vector<Point> E57Reader::ReadScan(int64_t scanIdx, int64_t ptsSize)
     const Data3D scanHeader = this->GetData3DHeader(scanIdx);
     const int64_t scanPtsCount = scanHeader.pointCount;
     
-    if (this->mReadPtsCount >= scanPtsCount || this->mReadPtsCount < 0)
+    if (this->mReadPtsCount[scanIdx] >= scanPtsCount || this->mReadPtsCount[scanIdx] < 0)
     {
         this->ResetScanReader(scanIdx);
         return pts;
     }
 
     ptsSize = std::min(ptsSize, scanPtsCount);
-    ptsSize = std::min(scanPtsCount - this->mReadPtsCount, ptsSize);
+    ptsSize = std::min(scanPtsCount - this->mReadPtsCount[scanIdx], ptsSize);
 
     if (!this->IsReaderValid(scanIdx)) 
         this->MakeScanReader(scanIdx, ptsSize);
@@ -89,7 +89,7 @@ std::vector<Point> E57Reader::ReadScan(int64_t scanIdx, int64_t ptsSize)
         {
             const Point pt = Point(pointsData, i);
             pts[count++] = pt;
-            this->mReadPtsCount++;
+            this->mReadPtsCount[scanIdx]++;
             if (count >= ptsSize) break;
         }
         if (count >= ptsSize) break;
@@ -97,26 +97,65 @@ std::vector<Point> E57Reader::ReadScan(int64_t scanIdx, int64_t ptsSize)
     return pts;
 }
 
-emscripten::val E57Reader::ReadImage(int64_t imageIdx)
+void E57Reader::ReadImage(int64_t imageIdx, emscripten::val onSuccess, emscripten::val onError)
 {
-    Image2DProjection imageProjection;
-    Image2DType imageType, imageMaskType, imageVisualType;
-    int64_t imageWidth, imageHeight, imageSize;
+    auto* data = new WorkData<E57Reader>{
+        this, imageIdx,
+        new emscripten::val(std::move(onSuccess)),
+        new emscripten::val(std::move(onError))
+    };
 
-    if (!this->mReader->GetImage2DSizes(imageIdx, imageProjection, imageType,
-            imageWidth, imageHeight, imageSize, imageMaskType, imageVisualType))
-        throw std::runtime_error("Cannot read image: GetImage2DSizes failed");
+    std::thread([data]()
+    {
+        struct ErrData { WorkData<E57Reader>* workerData; std::string msg; };
+        struct OkData  { WorkData<E57Reader>* workerData; std::vector<uint8_t> bytes; };
 
-    std::vector<uint8_t> imageData(imageSize);
-    const size_t rBytes = this->mReader->ReadImage2DData(
-        imageIdx, imageProjection, imageType, imageData.data(), 0, imageSize);
+        Image2DProjection imageProjection;
+        Image2DType       imageType, imageMaskType, imageVisualType;
+        int64_t           imageWidth, imageHeight, imageSize;
 
-    if (static_cast<int64_t>(rBytes) != imageSize)
-        throw std::runtime_error("Cannot read image: incomplete read");
+        if (!data->reader->mReader->GetImage2DSizes(
+                data->imageIdx, imageProjection, imageType,
+                imageWidth, imageHeight, imageSize, imageMaskType, imageVisualType))
+        {
+            emscripten_async_run_in_main_runtime_thread(EM_FUNC_SIG_VI,
+                (void*)+[](void* arg) {
+                    auto* errData = static_cast<ErrData*>(arg);
+                    (*errData->workerData->onError)(emscripten::val(errData->msg));
+                    delete errData->workerData;
+                    delete errData;
+                }, new ErrData{data, "Cannot read image: GetImage2DSizes failed"});
+            return;
+        }
 
-    return emscripten::val::global("Uint8Array").new_(
-        emscripten::val(emscripten::typed_memory_view(imageSize, imageData.data()))
-    );
+        std::vector<uint8_t> bytes(imageSize);
+        const size_t rBytes = data->reader->mReader->ReadImage2DData(
+            data->imageIdx, imageProjection, imageType, bytes.data(), 0, imageSize);
+
+        if (static_cast<int64_t>(rBytes) != imageSize)
+        {
+            emscripten_async_run_in_main_runtime_thread(EM_FUNC_SIG_VI,
+                (void*)+[](void* arg) {
+                    auto* errData = static_cast<ErrData*>(arg);
+                    (*errData->workerData->onError)(emscripten::val(errData->msg));
+                    delete errData->workerData;
+                    delete errData;
+                }, new ErrData{data, "Cannot read image: incomplete read"});
+            return;
+        }
+
+        emscripten_async_run_in_main_runtime_thread(EM_FUNC_SIG_VI,
+            (void*)+[](void* arg) {
+                auto* okData = static_cast<OkData*>(arg);
+                emscripten::val result = emscripten::val::global("Uint8Array").new_(
+                    emscripten::val(emscripten::typed_memory_view(okData->bytes.size(), okData->bytes.data()))
+                );
+                (*okData->workerData->onSuccess)(result);
+                delete okData->workerData;
+                delete okData;
+            }, new OkData{data, std::move(bytes)});
+
+    }).detach();
 }
 
 void E57Reader::MakeScanReader(int64_t scanIdx, int64_t chunkSize)
@@ -129,7 +168,7 @@ void E57Reader::MakeScanReader(int64_t scanIdx, int64_t chunkSize)
 void E57Reader::ResetScanReader(int64_t scanIdx)
 {
     this->DestroyScanReader(scanIdx);
-    this->mReadPtsCount = 0;
+    this->mReadPtsCount[scanIdx] = 0;
 }
 
 bool E57Reader::IsReaderValid(int64_t scanIdx)
@@ -140,7 +179,12 @@ bool E57Reader::IsReaderValid(int64_t scanIdx)
 
 void E57Reader::DestroyScanReader(int64_t scanIdx)
 {
-    if (this->mScanDataPoints[scanIdx] != nullptr) delete this->mScanDataPoints[scanIdx];
+    if (this->mScanDataPoints[scanIdx] != nullptr)
+    {
+        delete this->mScanDataPoints[scanIdx];
+        this->mScanDataPoints[scanIdx] = nullptr;
+    }
+
     this->mScanReaders[scanIdx]->close();
 }
 

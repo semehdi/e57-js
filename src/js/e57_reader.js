@@ -55,23 +55,29 @@ export class E57ReaderScan {
     }
 
     /**
-     * Iterates through the scan in fixed-size chunks, invoking `callback` for
-     * each chunk promise. Useful for streaming large scans without loading all
-     * points into memory at once.
+     * Iterates through the scan in fixed-size chunks, invoking `callback`
+     * sequentially for each chunk. Useful for streaming large scans without
+     * loading all points into memory at once.
      *
      * @param {number}   chunkSize - Number of points per chunk.
-     * @param {function(Promise<Point[]>): void} callback - Called once per chunk.
+     * @param {function(Point[]): Promise<void>|void} callback - Called once per chunk with the resolved points.
+     * @returns {Promise<void>}
+     *
+     * @example
+     * await scan.ScanPoints(1000, (points) => {
+     *     console.log(`Received ${points.length} points`);
+     * });
      */
     ScanPoints(chunkSize, callback)
     {
-        var scanHeader = this.GetHeader();
-        var scanPtsCount = scanHeader.pointCount;
-        var chunks = Math.ceil(scanPtsCount / chunkSize);
-        for (var iChunk = 0; iChunk < chunks; iChunk++)
-        {
-            var readPromise = this.ReadPoints(chunkSize);
-            callback(readPromise);
-        }
+        const scanHeader = this.GetHeader();
+        const scanPtsCount = scanHeader.pointCount;
+        const chunks = Math.ceil(scanPtsCount / chunkSize);
+
+        let chain = Promise.resolve();
+        for (let iChunk = 0; iChunk < chunks; iChunk++)
+            chain = chain.then(() => this.ReadPoints(chunkSize).then(callback));
+        return chain;
     }
 }
 
@@ -109,10 +115,8 @@ export class E57ReaderImage
      */
     ReadImage()
     {
-        var image2dHeader = this.GetHeader();
         return new Promise((resolve, reject) => {
-            var imgData = this._e57Reader.ReadImage(this._imageIdx);
-            resolve(imgData);
+            this._e57Reader.ReadImage(this._imageIdx, resolve, reject);
         });
     }
 
@@ -123,11 +127,9 @@ export class E57ReaderImage
      */
     ToBase64()
     {
-        return new Promise((resolve, reject) => {
-            this.ReadImage().then((imgData) => {
-                Buffer.from(imgData).toString("base64")
-            })
-        })
+        return this.ReadImage().then((imgData) => {
+            return Buffer.from(imgData).toString("base64");
+        });
     }
 
     /**

@@ -197,7 +197,7 @@ export class E57WriterImage
      */
     setHeader(imgHeader)
     {
-        this._imageHeader = imgheader;
+        this._imageHeader = imgHeader;
     }
 
     /**
