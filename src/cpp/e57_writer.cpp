@@ -17,7 +17,7 @@ int64_t E57Writer::AddImage(
     int32_t height
 )
 {
-    const std::vector<uint8_t> data = emscripten::vecFromJSArray<uint8_t>(jsArray);
+    std::vector<uint8_t> data = emscripten::vecFromJSArray<uint8_t>(jsArray);
     Image2D imgHeader = image2DHeader.ToImage2D();
 
     switch (imageProjection)
@@ -68,7 +68,7 @@ int64_t E57Writer::AddImage(
             imgHeader.visualReferenceRepresentation.imageHeight = height;
     }
 
-    const int64_t wBytes = this->mWriter->WriteImage2DData(imgHeader, imageType, imageProjection, startPos, data.data(), byteCount);
+    const size_t wBytes = this->mWriter->WriteImage2DData(imgHeader, imageType, imageProjection, startPos, data.data(), byteCount);
     return wBytes;
 }
 
@@ -77,7 +77,7 @@ int64_t E57Writer::AddScan(
         const emscripten::val& ptsArray
     )
 {
-    const std::vector<Point> points = emscripten::vecFromJSArray<Point>(ptsArray);
+    std::vector<Point> points = emscripten::vecFromJSArray<Point>(ptsArray);
 
     const int64_t numPoints = points.size();
     header.pointCount = numPoints;

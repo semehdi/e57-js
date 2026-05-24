@@ -4,6 +4,8 @@ await E57.Init();
 
 var writer = new E57Writer("file__.e57");
 
+console.log(Object.keys(E57.LibE57.Image2DProjection));
+
 var imageProjection = E57.LibE57.Image2DProjection.ProjectionVisual;
 var imageType = E57.LibE57.Image2DType.ImageJPEG;
 var imageHeader = new E57.LibE57.ImageHeader();
@@ -42,3 +44,9 @@ imageInstance.setRotation(0.9, 2.7, 2.3, 2.1);
 writer.AddScan(header, points);
 writer.Close();
 console.log("Done");
+
+var reader = new E57Reader("./Station018.e57");
+var image = reader.GetImage(0);
+image.Save("./image.jpg").then(() => {
+    console.log("Image creation done !");
+})

@@ -100,25 +100,23 @@ std::vector<Point> E57Reader::ReadScan(int64_t scanIdx, int64_t ptsSize)
 emscripten::val E57Reader::ReadImage(int64_t imageIdx)
 {
     Image2DProjection imageProjection;
-    Image2DType imageType;
+    Image2DType imageType, imageMaskType, imageVisualType;
     int64_t imageWidth, imageHeight, imageSize;
-    Image2DType imageMaskType, imageVisualType;
-    
-    bool isSuccess = this->mReader->GetImage2DSizes(imageIdx, imageProjection, imageType, 
-        imageWidth, imageHeight, imageSize, imageMaskType, imageVisualType);
-    if (!isSuccess)
-        throw std::runtime_error("Cannot read the image !");
 
-    uint8_t* imageData = new uint8_t[imageSize];
-    const size_t rBytes = this->mReader->ReadImage2DData(imageIdx, imageProjection, imageType, imageData, 0, imageSize);
+    if (!this->mReader->GetImage2DSizes(imageIdx, imageProjection, imageType,
+            imageWidth, imageHeight, imageSize, imageMaskType, imageVisualType))
+        throw std::runtime_error("Cannot read image: GetImage2DSizes failed");
 
-    emscripten::val jsImageArray = emscripten::val::global("Uint8Array").new_(imageSize);
-    emscripten::val::global("Uint8Array").call<emscripten::val>("from",
-        emscripten::val(emscripten::typed_memory_view(imageSize, imageData))
+    std::vector<uint8_t> imageData(imageSize);
+    const size_t rBytes = this->mReader->ReadImage2DData(
+        imageIdx, imageProjection, imageType, imageData.data(), 0, imageSize);
+
+    if (static_cast<int64_t>(rBytes) != imageSize)
+        throw std::runtime_error("Cannot read image: incomplete read");
+
+    return emscripten::val::global("Uint8Array").new_(
+        emscripten::val(emscripten::typed_memory_view(imageSize, imageData.data()))
     );
-
-    delete[] imageData;
-    return jsImageArray;
 }
 
 void E57Reader::MakeScanReader(int64_t scanIdx, int64_t chunkSize)
@@ -148,6 +146,12 @@ void E57Reader::DestroyScanReader(int64_t scanIdx)
 
 E57Reader::~E57Reader()
 {
+    for (int64_t iScanPts = 0; iScanPts < this->mScanDataPoints.size(); iScanPts++)
+    {
+        Data3DPointsDouble* pointsDataPtr = this->mScanDataPoints[iScanPts];
+        if (pointsDataPtr != nullptr) delete pointsDataPtr;
+    }
+
     if (this->mReader->IsOpen()) this->mReader->Close();
     delete this->mReader;
 }
