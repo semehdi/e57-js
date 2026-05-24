@@ -1,4 +1,4 @@
-import { E57Init } from "./e57_init.js"
+import { E57 } from "./e57_init.js"
 
 import path from "path"
 import fs from "fs"
@@ -78,17 +78,17 @@ export class E57ReaderImage
         const imageType = this.GetHeader().imageType;
 
         switch (imageType) {
-            case E57Init.WasmModule.Image2DType.ImageJPEG:
+            case E57.LibE57.Image2DType.ImageJPEG:
                 return ".jpeg";
-            case E57Init.WasmModule.Image2DType.ImagePNG:
+            case E57.LibE57.Image2DType.ImagePNG:
                 return ".png";
-            case E57Init.WasmModule.Image2DType.ImageMaskPNG:
+            case E57.LibE57.Image2DType.ImageMaskPNG:
                 return ".png";
-            case E57Init.WasmModule.Image2DType.E57_JPEG_IMAGE:
+            case E57.LibE57.Image2DType.E57_JPEG_IMAGE:
                 return ".jpeg";
-            case E57Init.WasmModule.Image2DType.E57_PNG_IMAGE:
+            case E57.LibE57.Image2DType.E57_PNG_IMAGE:
                 return ".png";
-            case E57Init.WasmModule.Image2DType.E57_PNG_IMAGE_MASK:
+            case E57.LibE57.Image2DType.E57_PNG_IMAGE_MASK:
                 return ".png"
             default:
                 return ".jpg";
@@ -111,8 +111,8 @@ export class E57Reader {
     constructor(filePath) 
     {
         const absInputPath = path.resolve(filePath);
-        const inputFilePath = path.join(E57Init.RootDir, absInputPath);
-        this.reader = new E57Init.WasmModule.E57Reader(inputFilePath);
+        const inputFilePath = path.join(E57.RootDir, absInputPath);
+        this.reader = new E57.LibE57.E57Reader(inputFilePath);
 
         var scansCount = this.GetData3DCount();
         this.scans = new Array(scansCount);

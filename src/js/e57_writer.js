@@ -1,4 +1,4 @@
-import { E57Init } from "./e57_init.js"
+import { E57 } from "./e57_init.js"
 
 import path from "path"
 import fs from "fs"
@@ -11,7 +11,7 @@ export class E57WriterImage
         this._imgPath = imagePath;
         this._imgType = imageType;
         this._imgProjection = imageProjection;
-        this._imageHeader = new E57Init.WasmModule.ImageHeader();
+        this._imageHeader = new E57.LibE57.ImageHeader();
     }
 
     getPath()
@@ -139,8 +139,8 @@ export class E57Writer
     constructor(filePath)
     {
         const absInputPath = path.resolve(filePath);
-        const inputFilePath = path.join(E57Init.RootDir, absInputPath);
-        this.writer = new E57Init.WasmModule.E57Writer(inputFilePath);
+        const inputFilePath = path.join(E57.RootDir, absInputPath);
+        this.writer = new E57.LibE57.E57Writer(inputFilePath);
     }
 
     AddImage(image)

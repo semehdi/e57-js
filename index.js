@@ -1,34 +1,34 @@
-import { E57Reader, E57Writer, E57Init, E57WriterImage } from './dist/index.js'
+import { E57Reader, E57Writer, E57, E57WriterImage } from './dist/index.js'
 
-await E57Init.Init();
+await E57.Init();
 
 var writer = new E57Writer("file__.e57");
 
-var imageProjection = E57Init.WasmModule.Image2DProjection.ProjectionVisual;
-var imageType = E57Init.WasmModule.Image2DType.ImageJPEG;
-var imageHeader = new E57Init.WasmModule.ImageHeader();
+var imageProjection = E57.LibE57.Image2DProjection.ProjectionVisual;
+var imageType = E57.LibE57.Image2DType.ImageJPEG;
+var imageHeader = new E57.LibE57.ImageHeader();
 var imagePath = "tests/data/images/image_1.jpg";
 
-var header = new E57Init.WasmModule.Data3D();
+var header = new E57.LibE57.Data3D();
 
 header.guid = "Cartesian Points Min/Max Float Header GUID";
 header.pointFields.cartesianXField = true;
 header.pointFields.cartesianYField = true;
 header.pointFields.cartesianZField = true;
 
-header.pointFields.pointRangeNodeType = E57Init.WasmModule.NumericalNodeType.ScaledInteger;
+header.pointFields.pointRangeNodeType = E57.LibE57.NumericalNodeType.ScaledInteger;
 header.pointFields.pointRangeScale = 0.1;
 header.pointFields.timeStampField = true;
-header.pointFields.timeNodeType = E57Init.WasmModule.NumericalNodeType.ScaledInteger;
+header.pointFields.timeNodeType = E57.LibE57.NumericalNodeType.ScaledInteger;
 header.pointFields.timeScale = 0.1;
 
-var pt = new E57Init.WasmModule.Point();
+var pt = new E57.LibE57.Point();
 var numPoints = 1024;
 var points = new Array(numPoints);
 
 for (var i = 0; i < numPoints; i++)
 {
-    var pt = new E57Init.WasmModule.Point();
+    var pt = new E57.LibE57.Point();
     pt.cartesianX = i;
     pt.cartesianY = i;
     pt.cartesianZ = i;

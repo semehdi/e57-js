@@ -17,7 +17,7 @@ int64_t E57Writer::AddImage(
     int32_t height
 )
 {
-    std::vector<uint8_t> data = emscripten::vecFromJSArray<uint8_t>(jsArray);
+    const std::vector<uint8_t> data = emscripten::vecFromJSArray<uint8_t>(jsArray);
     Image2D imgHeader = image2DHeader.ToImage2D();
 
     switch (imageProjection)
@@ -77,7 +77,7 @@ int64_t E57Writer::AddScan(
         const emscripten::val& ptsArray
     )
 {
-    std::vector<Point> points = emscripten::vecFromJSArray<Point>(ptsArray);
+    const std::vector<Point> points = emscripten::vecFromJSArray<Point>(ptsArray);
 
     const int64_t numPoints = points.size();
     header.pointCount = numPoints;
@@ -87,11 +87,6 @@ int64_t E57Writer::AddScan(
     for ( int64_t iPoint = 0; iPoint < numPoints; ++iPoint )
     {
         const Point point = points[iPoint];
-
-        std::cout << "++++++++++++++++++++++" << std::endl;
-        std::cout << point.cartesianX << std::endl;
-        std::cout << point.cartesianY << std::endl;
-        std::cout << point.cartesianZ << std::endl;
 
         pointsData.cartesianX[iPoint] = point.cartesianX;
         pointsData.cartesianY[iPoint] = point.cartesianY;
@@ -124,9 +119,9 @@ int64_t E57Writer::AddScan(
         pointsData.isIntensityInvalid[iPoint] = point.isIntensityInvalid;
     }
 
-    this->mWriter->WriteData3DData( header, pointsData );
+    const int64_t scanIdx = this->mWriter->WriteData3DData( header, pointsData );
 
-    return 0;
+    return scanIdx;
 }
 
 void E57Writer::Close()

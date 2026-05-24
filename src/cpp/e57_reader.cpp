@@ -27,8 +27,12 @@ ImageHeader E57Reader::GetImage2DHeader(int64_t imageIdx)
     Image2DType imageType;
     int64_t imageWidth, imageHeight, imageSize;
     Image2DType imageMaskType, imageVisualType;
-    bool isSucess = this->mReader->GetImage2DSizes(imageIdx, imageProjection, imageType, 
+    
+    const bool isSucess = this->mReader->GetImage2DSizes(imageIdx, imageProjection, imageType, 
         imageWidth, imageHeight, imageSize, imageMaskType, imageVisualType);
+    if (!isSucess)
+        throw std::runtime_error("Cannot get the header of the image !");
+
     ImageHeader imageHeader = ImageHeader(image2d);
     imageHeader.imageProjection = imageProjection;
     imageHeader.imageType = imageType;
@@ -83,7 +87,7 @@ std::vector<Point> E57Reader::ReadScan(int64_t scanIdx, int64_t ptsSize)
     {
         for (long i = 0; i < size; i++)
         {
-            Point pt = Point(pointsData, i);
+            const Point pt = Point(pointsData, i);
             pts[count++] = pt;
             this->mReadPtsCount++;
             if (count >= ptsSize) break;
@@ -100,10 +104,13 @@ emscripten::val E57Reader::ReadImage(int64_t imageIdx)
     int64_t imageWidth, imageHeight, imageSize;
     Image2DType imageMaskType, imageVisualType;
     
-    bool isSucess = this->mReader->GetImage2DSizes(imageIdx, imageProjection, imageType, 
+    bool isSuccess = this->mReader->GetImage2DSizes(imageIdx, imageProjection, imageType, 
         imageWidth, imageHeight, imageSize, imageMaskType, imageVisualType);
+    if (!isSuccess)
+        throw std::runtime_error("Cannot read the image !");
+
     uint8_t* imageData = new uint8_t[imageSize];
-    this->mReader->ReadImage2DData(imageIdx, imageProjection, imageType, imageData, 0, imageSize);
+    const size_t rBytes = this->mReader->ReadImage2DData(imageIdx, imageProjection, imageType, imageData, 0, imageSize);
 
     emscripten::val jsImageArray = emscripten::val::global("Uint8Array").new_(imageSize);
     emscripten::val::global("Uint8Array").call<emscripten::val>("from",
@@ -111,7 +118,6 @@ emscripten::val E57Reader::ReadImage(int64_t imageIdx)
     );
 
     delete[] imageData;
-
     return jsImageArray;
 }
 
