@@ -1,17 +1,16 @@
 #pragma once
 
 #include <iostream>
-#include <thread>
 #include <unordered_map>
 #include <vector>
+#include <thread>
+#include <emscripten.h>
 #include <emscripten/val.h>
-#include <emscripten/threading.h>
 
 #include "E57SimpleReader.h"
 #include "E57SimpleData.h"
 #include "point.hpp"
 #include "image_header.hpp"
-#include "work_data.hpp"
 
 using namespace e57;
 
@@ -26,7 +25,7 @@ public:
     Data3D GetData3DHeader(int64_t dataIdx);
     ImageHeader GetImage2DHeader(int64_t imageIdx);
     std::vector<Point> ReadScan(int64_t scanIdx, int64_t ptsSize);
-    void ReadImage(int64_t imageIdx, emscripten::val onSuccess, emscripten::val onError);
+    emscripten::val ReadImage(int64_t imageIdx);
     void ResetScanReader(int64_t scanIdx);
  
     ~E57Reader();

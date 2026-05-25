@@ -1,6 +1,11 @@
 #include "e57_reader.hpp"
 #include "image_header.hpp"
 
+#include <atomic>
+#include <pthread.h>
+#include <emscripten/threading.h>
+#include <emscripten/promise.h>
+
 E57Reader::E57Reader(const std::string& filePath) {
     this->mReader = new Reader(filePath);
 }
@@ -97,65 +102,27 @@ std::vector<Point> E57Reader::ReadScan(int64_t scanIdx, int64_t ptsSize)
     return pts;
 }
 
-void E57Reader::ReadImage(int64_t imageIdx, emscripten::val onSuccess, emscripten::val onError)
+emscripten::val E57Reader::ReadImage(int64_t imageIdx)
 {
-    auto* data = new WorkData<E57Reader>{
-        this, imageIdx,
-        new emscripten::val(std::move(onSuccess)),
-        new emscripten::val(std::move(onError))
-    };
+    Image2DProjection imageProjection;
+    Image2DType       imageType, imageMaskType, imageVisualType;
+    int64_t           imageWidth, imageHeight, imageSize;
 
-    std::thread([data]()
-    {
-        struct ErrData { WorkData<E57Reader>* workerData; std::string msg; };
-        struct OkData  { WorkData<E57Reader>* workerData; std::vector<uint8_t> bytes; };
+    if (!this->mReader->GetImage2DSizes(imageIdx, imageProjection, imageType,
+            imageWidth, imageHeight, imageSize, imageMaskType, imageVisualType))
+        throw std::runtime_error("Cannot read image: GetImage2DSizes failed");
 
-        Image2DProjection imageProjection;
-        Image2DType       imageType, imageMaskType, imageVisualType;
-        int64_t           imageWidth, imageHeight, imageSize;
+    std::vector<uint8_t> bytes(imageSize);
+    const size_t rBytes = this->mReader->ReadImage2DData(
+        imageIdx, imageProjection, imageType, bytes.data(), 0, imageSize);
 
-        if (!data->reader->mReader->GetImage2DSizes(
-                data->imageIdx, imageProjection, imageType,
-                imageWidth, imageHeight, imageSize, imageMaskType, imageVisualType))
-        {
-            emscripten_async_run_in_main_runtime_thread(EM_FUNC_SIG_VI,
-                (void*)+[](void* arg) {
-                    auto* errData = static_cast<ErrData*>(arg);
-                    (*errData->workerData->onError)(emscripten::val(errData->msg));
-                    delete errData->workerData;
-                    delete errData;
-                }, new ErrData{data, "Cannot read image: GetImage2DSizes failed"});
-            return;
-        }
+    if (static_cast<int64_t>(rBytes) != imageSize)
+        throw std::runtime_error("Cannot read image: incomplete read");
 
-        std::vector<uint8_t> bytes(imageSize);
-        const size_t rBytes = data->reader->mReader->ReadImage2DData(
-            data->imageIdx, imageProjection, imageType, bytes.data(), 0, imageSize);
-
-        if (static_cast<int64_t>(rBytes) != imageSize)
-        {
-            emscripten_async_run_in_main_runtime_thread(EM_FUNC_SIG_VI,
-                (void*)+[](void* arg) {
-                    auto* errData = static_cast<ErrData*>(arg);
-                    (*errData->workerData->onError)(emscripten::val(errData->msg));
-                    delete errData->workerData;
-                    delete errData;
-                }, new ErrData{data, "Cannot read image: incomplete read"});
-            return;
-        }
-
-        emscripten_async_run_in_main_runtime_thread(EM_FUNC_SIG_VI,
-            (void*)+[](void* arg) {
-                auto* okData = static_cast<OkData*>(arg);
-                emscripten::val result = emscripten::val::global("Uint8Array").new_(
-                    emscripten::val(emscripten::typed_memory_view(okData->bytes.size(), okData->bytes.data()))
-                );
-                (*okData->workerData->onSuccess)(result);
-                delete okData->workerData;
-                delete okData;
-            }, new OkData{data, std::move(bytes)});
-
-    }).detach();
+    // Copy bytes into a JS-owned Uint8Array before the vector goes out of scope.
+    return emscripten::val::global("Uint8Array").new_(
+        emscripten::val(emscripten::typed_memory_view(bytes.size(), bytes.data()))
+    );
 }
 
 void E57Reader::MakeScanReader(int64_t scanIdx, int64_t chunkSize)

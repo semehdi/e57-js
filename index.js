@@ -47,7 +47,7 @@ console.log("Done");
 
 var reader = new E57Reader("./Station018.e57");
 var image = reader.GetImage(0);
-image.Save("./image.jpg").then(() => {
+image.Save("image.jpg").then(() => {
     console.log("Image creation done !");
 });
-console.log("Is that true !");
+
