@@ -6,11 +6,15 @@
 #include <thread>
 #include <emscripten.h>
 #include <emscripten/val.h>
+#include <emscripten/threading.h>
+#include <cstdlib>
+#include <pthread.h>
 
 #include "E57SimpleReader.h"
 #include "E57SimpleData.h"
 #include "point.hpp"
 #include "image_header.hpp"
+#include "em_promise.hpp"
 
 using namespace e57;
 
@@ -27,10 +31,23 @@ public:
     std::vector<Point> ReadScan(int64_t scanIdx, int64_t ptsSize);
     emscripten::val ReadImage(int64_t imageIdx);
     void ResetScanReader(int64_t scanIdx);
+    emscripten::val TestPromise();
  
     ~E57Reader();
 
 private:
+    struct ReadImageCtx {
+        E57Reader*           self;
+        int64_t              imageIdx;
+        int                  deferredId;
+        std::vector<uint8_t> bytes;
+        std::string          error;
+        bool                 success = false;
+    };
+
+    static void  onImageReady(void* arg);
+    static void* readImageThread(void* arg);
+
     Reader* mReader;
     std::unordered_map<int64_t, std::shared_ptr<CompressedVectorReader>> mScanReaders;
     std::unordered_map<int64_t, Data3DPointsDouble*> mScanDataPoints;

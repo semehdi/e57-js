@@ -47,7 +47,24 @@ console.log("Done");
 
 var reader = new E57Reader("./Station018.e57");
 var image = reader.GetImage(0);
-image.Save("image.jpg").then(() => {
-    console.log("Image creation done !");
+// image.Save("image.jpg").then(() => {
+//     console.log("Image creation done !");
+// });
+
+let done = false;
+image.ReadImage().then((data) => {
+    console.log(data);
+    done = true;
 });
+
+// let done = false;
+// reader.TestPromise().then((data) => {
+//     console.log("Doneeeeeeeeeeeee", data);
+//     done = true;
+// });
+
+while (!done) {
+    await new Promise(resolve => setTimeout(resolve, 10));
+}
+
 

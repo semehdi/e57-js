@@ -115,9 +115,7 @@ export class E57ReaderImage
      */
     ReadImage()
     {
-        return new Promise((resolve, reject) => {
-            resolve(this._e57Reader.ReadImage(this._imageIdx));
-        });
+        return this._e57Reader.ReadImage(this._imageIdx);
     }
 
     /**
@@ -216,6 +214,11 @@ export class E57Reader {
         {
             this.images[iImage] = new E57ReaderImage(this.reader, iImage);
         }
+    }
+
+    TestPromise()
+    {
+        return this.reader.TestPromise();
     }
 
     /**

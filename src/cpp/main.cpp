@@ -1,3 +1,4 @@
+#include <emscripten.h>
 #include <emscripten/bind.h>
 #include <unordered_map>
 
@@ -668,7 +669,8 @@ EMSCRIPTEN_BINDINGS(e57) {
         .function("GetData3DCount", &E57Reader::GetData3DCount)
         .function("GetImage2DCount", &E57Reader::GetImage2DCount)
         .function("ReadScan", &E57Reader::ReadScan)
-        .function("ReadImage", &E57Reader::ReadImage);
+        .function("ReadImage", &E57Reader::ReadImage)
+        .function("TestPromise", &E57Reader::TestPromise);
 
     class_<E57Writer>("E57Writer")
         .constructor<const std::string&>()

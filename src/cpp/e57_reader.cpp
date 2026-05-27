@@ -1,13 +1,23 @@
 #include "e57_reader.hpp"
-#include "image_header.hpp"
-
-#include <atomic>
-#include <pthread.h>
-#include <emscripten/threading.h>
-#include <emscripten/promise.h>
 
 E57Reader::E57Reader(const std::string& filePath) {
     this->mReader = new Reader(filePath);
+}
+
+emscripten::val E57Reader::TestPromise()
+{
+    auto* p = new EmPromise();
+    auto jsPromise = p->take();
+    std::thread([p]() {
+        emscripten_log(EM_LOG_CONSOLE, "TestPromise: thread running");
+        emscripten_async_run_in_main_runtime_thread(EM_FUNC_SIG_VI,
+            (void*)(+[](void* arg) {
+                auto* p = static_cast<EmPromise*>(arg);
+                p->resolve(emscripten::val(42));
+                delete p;
+            }), p);
+    }).detach();
+    return jsPromise;
 }
 
 E57Root E57Reader::GetHeader()
@@ -104,25 +114,50 @@ std::vector<Point> E57Reader::ReadScan(int64_t scanIdx, int64_t ptsSize)
 
 emscripten::val E57Reader::ReadImage(int64_t imageIdx)
 {
-    Image2DProjection imageProjection;
-    Image2DType       imageType, imageMaskType, imageVisualType;
-    int64_t           imageWidth, imageHeight, imageSize;
+    auto* p         = new EmPromise();
+    auto  jsPromise = p->take();
+    auto* eps       = new EmPromiseSig<uint8_t>{ p };
 
-    if (!this->mReader->GetImage2DSizes(imageIdx, imageProjection, imageType,
-            imageWidth, imageHeight, imageSize, imageMaskType, imageVisualType))
-        throw std::runtime_error("Cannot read image: GetImage2DSizes failed");
+    std::thread([this, imageIdx, eps]() {
+        Image2DProjection proj;
+        Image2DType       type, maskType, visType;
+        int64_t           w, h, size;
 
-    std::vector<uint8_t> bytes(imageSize);
-    const size_t rBytes = this->mReader->ReadImage2DData(
-        imageIdx, imageProjection, imageType, bytes.data(), 0, imageSize);
+        if (!this->mReader->GetImage2DSizes(imageIdx, proj, type,
+                w, h, size, maskType, visType)) {
+            eps->error   = "Cannot read image: GetImage2DSizes failed";
+            eps->success = false;
+        } else {
+            eps->size = static_cast<int32_t>(size);
+            eps->ptr  = static_cast<uint8_t*>(malloc(eps->size));
+            const size_t rBytes = this->mReader->ReadImage2DData(
+                imageIdx, proj, type, eps->ptr, 0, eps->size);
+            eps->success = (static_cast<int64_t>(rBytes) == size);
+            if (!eps->success) {
+                free(eps->ptr);
+                eps->ptr   = nullptr;
+                eps->error = "Cannot read image: incomplete read";
+            }
+        }
 
-    if (static_cast<int64_t>(rBytes) != imageSize)
-        throw std::runtime_error("Cannot read image: incomplete read");
-
-    // Copy bytes into a JS-owned Uint8Array before the vector goes out of scope.
-    return emscripten::val::global("Uint8Array").new_(
-        emscripten::val(emscripten::typed_memory_view(bytes.size(), bytes.data()))
-    );
+        emscripten_async_run_in_main_runtime_thread(EM_FUNC_SIG_VI,
+            (void*)(+[](void* arg) {
+                auto* eps = static_cast<EmPromiseSig<uint8_t>*>(arg);
+                if (eps->success) {
+                    // Zero-copy: Uint8Array views WASM SharedArrayBuffer directly.
+                    // FinalizationRegistry in _emjs_uint8array_view frees eps->ptr on GC.
+                    eps->promise->resolve(
+                        emscripten::val::take_ownership(
+                            EmPromise::arrayView<uint8_t>(eps->ptr, eps->size))
+                    );
+                } else {
+                    eps->promise->reject(eps->error);
+                }
+                delete eps->promise;
+                delete eps;
+            }), eps);
+    }).detach();
+    return jsPromise;
 }
 
 void E57Reader::MakeScanReader(int64_t scanIdx, int64_t chunkSize)
