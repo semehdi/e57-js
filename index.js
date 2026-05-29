@@ -41,22 +41,26 @@ var imageInstance = new E57WriterImage(imagePath, imageType, imageProjection);
 imageInstance.setName("Image1");
 imageInstance.setRotation(0.9, 2.7, 2.3, 2.1);
 
-writer.AddScan(header, points);
-writer.Close();
-console.log("Done");
-
-var reader = new E57Reader("./Station018.e57");
-var image = reader.GetImage(0);
-
 let done = false;
-image.Save("output.jpg").then(() => {
-    console.log("Image saved!");
+writer.AddScanSync(header, points);
+writer.AddImage(imageInstance).then((data) => {
+    console.log("Done creating the image !");
     done = true;
 });
+
+// var reader = new E57Reader("./Station018.e57");
+// var image = reader.GetImage(0);
+
+// let done = false;
+// image.Save("output.jpg").then(() => {
+//     console.log("Image saved!");
+//     done = true;
+// });
 
 while (!done) {
     console.log("Waiting...");
     await new Promise(resolve => setTimeout(resolve, 100));
 }
 
-
+writer.Close();
+console.log("Done");

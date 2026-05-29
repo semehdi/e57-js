@@ -676,7 +676,9 @@ EMSCRIPTEN_BINDINGS(e57) {
 
     class_<E57Writer>("E57Writer")
         .constructor<const std::string&>()
+        .function("AddImageSync", &E57Writer::AddImageSync, allow_raw_pointers())
         .function("AddImage", &E57Writer::AddImage, allow_raw_pointers())
+        .function("AddScanSync", &E57Writer::AddScanSync, allow_raw_pointers())
         .function("AddScan", &E57Writer::AddScan, allow_raw_pointers())
         .function("Close", &E57Writer::Close);
 

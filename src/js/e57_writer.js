@@ -103,31 +103,28 @@ export class E57WriterImage
      *
      * @returns {Promise<[number, number]>}
      */
-    getDimensions()
+    async getDimensions()
     {
-        return sharp(this._imgPath).metadata().then((meta) => {
-            return meta.width, meta.height;
-        });
+        const meta = await sharp(this._imgPath).metadata();
+        return [meta.width, meta.height];
     }
 
     /**
      * @returns {Promise<number>} Width in pixels.
      */
-    getWidth()
+    async getWidth()
     {
-        return sharp(this._imgPath).metadata().then((meta) => {
-            return meta.width;
-        });
+        const meta = await sharp(this._imgPath).metadata();
+        return meta.width;
     }
 
     /**
      * @returns {Promise<number>} Height in pixels.
      */
-    getHeight()
+    async getHeight()
     {
-        return sharp(this._imgPath).metadata().then((meta) => {
-            return meta.height;
-        });
+        const meta = await sharp(this._imgPath).metadata();
+        return meta.height;
     }
 
     /**
@@ -205,12 +202,10 @@ export class E57WriterImage
      *
      * @returns {Promise<Uint8Array>}
      */
-    getBuffer()
+    async getBuffer()
     {
-        return fs.promises.readFile(this.getPath()).then((buffer) => {
-            var bufferData = new Uint8Array(buffer);
-            return bufferData;
-        });
+        const buffer = await fs.promises.readFile(this.getPath());
+        return new Uint8Array(buffer);
     }
 
     /**
@@ -271,40 +266,68 @@ export class E57Writer
     }
 
     /**
-     * Reads the image buffer from disk and writes it to the E57 file.
+     * Reads the image buffer from disk and writes it to the E57 file synchronously.
+     * Blocks until the write is complete. Width and height must be provided since
+     * there is no synchronous image metadata API available in JS.
      *
-     * @param {E57WriterImage} image - The image to write.
-     * @returns {Promise<void>}
+     * @param {E57WriterImage} image  - The image to write.
+     * @param {number}         width  - Image width in pixels.
+     * @param {number}         height - Image height in pixels.
+     * @returns {number} Number of bytes written.
      */
-    AddImage(image)
+    AddImageSync(image, width, height)
     {
-        return image.getBuffer().then((buffer) => {
-            var bufferData = new Uint8Array(buffer);
-            return sharp(buffer).metadata().then((meta) => {
-                const imgWidth = meta.width;
-                const imgHeight = meta.height;
-                this.writer.AddImage(image.getHeader(), image.getType(), image.getProjection(), 0, bufferData, bufferData.length, imgWidth, imgHeight);
-            })
-        })
+        const buffer     = fs.readFileSync(image.getPath());
+        const bufferData = new Uint8Array(buffer);
+        return this.writer.AddImageSync(
+            image.getHeader(), image.getType(), image.getProjection(),
+            0, bufferData, bufferData.length, width, height
+        );
     }
 
     /**
-     * Writes a 3D scan to the file.
+     * Reads the image buffer from disk and writes it to the E57 file asynchronously.
+     * The write I/O runs on a background thread.
      *
-     * @param {object}   scanHeader - `Data3D` struct describing the scan (point fields, bounds, …).
-     * @param {object[]} points     - Array of `Point` objects (created via `new E57.LibE57.Point()`).
+     * @param {E57WriterImage} image - The image to write.
+     * @returns {Promise<number>} Resolves with the number of bytes written.
+     */
+    async AddImage(image)
+    {
+        const [buffer, meta] = await Promise.all([
+            image.getBuffer(),
+            sharp(image.getPath()).metadata()
+        ]);
+        const bufferData = new Uint8Array(buffer);
+        return this.writer.AddImage(
+            image.getHeader(), image.getType(), image.getProjection(),
+            0, bufferData, bufferData.length, meta.width, meta.height
+        );
+    }
+
+    /**
+     * Writes a 3D scan to the file synchronously. Blocks until complete.
+     *
+     * @param {object}   scanHeader - `Data3D` struct describing the scan.
+     * @param {object[]} points     - Array of `Point` objects.
+     * @returns {number} Zero-based index assigned to the new scan.
+     */
+    AddScanSync(scanHeader, points)
+    {
+        return this.writer.AddScanSync(scanHeader, points);
+    }
+
+    /**
+     * Writes a 3D scan to the file asynchronously.
+     * Point extraction runs on the main thread; the file write runs on a background thread.
+     *
+     * @param {object}   scanHeader - `Data3D` struct describing the scan.
+     * @param {object[]} points     - Array of `Point` objects.
      * @returns {Promise<number>} Resolves with the zero-based index assigned to the new scan.
      */
     AddScan(scanHeader, points)
     {
-        return new Promise((resolve, reject) => {
-            var scanIdx = this.writer.AddScan(scanHeader, points);
-            if (scanIdx >= 0) {
-                resolve(scanIdx);
-            } else {
-                reject(new Error("Failed to add the scan !"));
-            }
-        });
+        return this.writer.AddScan(scanHeader, points);
     }
 
     /**
