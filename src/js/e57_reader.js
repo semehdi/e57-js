@@ -45,40 +45,63 @@ export class E57ReaderScan {
      * Reads up to `ptsCount` points starting from the current read position.
      *
      * @param {number} ptsCount - Maximum number of points to read.
-     * @returns {Promise<Point[]>} Resolves with an array of `Point` objects.
+     * @returns {Promise<VectorPoint>} Resolves with a `VectorPoint`.
      */
     ReadPoints(ptsCount)
     {
-        return new Promise((resolve, reject) => {
-            resolve(this.e57Reader.ReadScan(this.scanIdx, ptsCount));
-        });
+        return this.e57Reader.ReadScan(this.scanIdx, ptsCount);
     }
 
     /**
-     * Iterates through the scan in fixed-size chunks, invoking `callback`
-     * sequentially for each chunk. Useful for streaming large scans without
-     * loading all points into memory at once.
+     * Reads up to `ptsCount` points synchronously. Blocks until complete.
+     *
+     * @param {number} ptsCount - Maximum number of points to read.
+     * @returns {VectorPoint}
+     */
+    ReadPointsSync(ptsCount)
+    {
+        return this.e57Reader.ReadScanSync(this.scanIdx, ptsCount);
+    }
+
+    /**
+     * Iterates through the scan in fixed-size chunks.
+     *
+     * With a `callback`: invokes it sequentially for each chunk and resolves
+     * with `undefined` when all chunks are processed.
+     *
+     * Without a `callback`: collects every chunk and resolves with an array
+     * of `VectorPoint` (one entry per chunk).
      *
      * @param {number}   chunkSize - Number of points per chunk.
-     * @param {function(Point[]): Promise<void>|void} callback - Called once per chunk with the resolved points.
-     * @returns {Promise<void>}
+     * @param {function(VectorPoint): Promise<void>|void} [callback] - Called once per chunk.
+     * @returns {Promise<void|VectorPoint[]>}
      *
      * @example
+     * // streaming
      * await scan.ScanPoints(1000, (points) => {
-     *     console.log(`Received ${points.length} points`);
+     *     console.log(`Received ${points.size()} points`);
      * });
+     *
+     * // collect all chunks
+     * const chunks = await scan.ScanPoints(1000);
      */
-    ScanPoints(chunkSize, callback)
+    async ScanPoints(chunkSize, callback)
     {
-        const scanHeader = this.GetHeader();
-        const scanPtsCount = scanHeader.pointCount;
+        const scanPtsCount = this.GetHeader().pointCount;
         const chunks = Math.ceil(scanPtsCount / chunkSize);
 
-        let chain = Promise.resolve();
+        if (callback) {
+            for (let iChunk = 0; iChunk < chunks; iChunk++)
+                await this.ReadPoints(chunkSize).then(callback);
+            return;
+        }
+
+        const results = [];
         for (let iChunk = 0; iChunk < chunks; iChunk++)
-            chain = chain.then(() => this.ReadPoints(chunkSize).then(callback));
-        return chain;
+            results.push(await this.ReadPoints(chunkSize));
+        return results;
     }
+
 }
 
 /**
@@ -109,13 +132,23 @@ export class E57ReaderImage
     }
 
     /**
-     * Reads the raw image bytes.
+     * Reads the raw image bytes asynchronously.
      *
      * @returns {Promise<Uint8Array>} Resolves with the image data buffer.
      */
     ReadImage()
     {
         return this._e57Reader.ReadImage(this._imageIdx);
+    }
+
+    /**
+     * Reads the raw image bytes synchronously. Blocks until complete.
+     *
+     * @returns {Uint8Array} The image data buffer.
+     */
+    ReadImageSync()
+    {
+        return this._e57Reader.ReadImageSync(this._imageIdx);
     }
 
     /**

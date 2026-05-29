@@ -669,7 +669,9 @@ EMSCRIPTEN_BINDINGS(e57) {
         .function("GetData3DCount", &E57Reader::GetData3DCount)
         .function("GetImage2DCount", &E57Reader::GetImage2DCount)
         .function("ReadScan", &E57Reader::ReadScan)
+        .function("ReadScanSync", &E57Reader::ReadScanSync)
         .function("ReadImage", &E57Reader::ReadImage)
+        .function("ReadImageSync", &E57Reader::ReadImageSync)
         .function("TestPromise", &E57Reader::TestPromise);
 
     class_<E57Writer>("E57Writer")

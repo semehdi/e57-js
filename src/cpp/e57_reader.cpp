@@ -69,31 +69,31 @@ int64_t E57Reader::GetImage2DCount()
     return this->mReader->GetImage2DCount();
 }
 
-std::vector<Point> E57Reader::ReadScan(int64_t scanIdx, int64_t ptsSize)
+void E57Reader::FetchScan(int64_t scanIdx, int64_t ptsSize, ScanPromiseSig<Point>& eps)
 {
-    std::vector<Point> pts = std::vector<Point>();
-
-    if (ptsSize < 0) return pts;
+    if (ptsSize < 0)
+    {
+        eps.success = false;
+        eps.error   = "Cannot read scan points !";
+        return;
+    }
 
     const Data3D scanHeader = this->GetData3DHeader(scanIdx);
     const int64_t scanPtsCount = scanHeader.pointCount;
-    
+
     if (this->mReadPtsCount[scanIdx] >= scanPtsCount || this->mReadPtsCount[scanIdx] < 0)
-    {
         this->ResetScanReader(scanIdx);
-        return pts;
-    }
 
     ptsSize = std::min(ptsSize, scanPtsCount);
     ptsSize = std::min(scanPtsCount - this->mReadPtsCount[scanIdx], ptsSize);
 
-    if (!this->IsReaderValid(scanIdx)) 
+    if (!this->IsReaderValid(scanIdx))
         this->MakeScanReader(scanIdx, ptsSize);
-    
+
     Data3DPointsDouble* pointsData = this->mScanDataPoints[scanIdx];
     std::shared_ptr<CompressedVectorReader> dataReader = this->mScanReaders[scanIdx];
 
-    pts.resize(ptsSize);
+    eps.vec.reserve(ptsSize);
 
     int64_t count = 0;
     unsigned size = 0;
@@ -102,50 +102,112 @@ std::vector<Point> E57Reader::ReadScan(int64_t scanIdx, int64_t ptsSize)
     {
         for (long i = 0; i < size; i++)
         {
-            const Point pt = Point(pointsData, i);
-            pts[count++] = pt;
+            eps.vec.emplace_back(pointsData, i);
             this->mReadPtsCount[scanIdx]++;
-            if (count >= ptsSize) break;
+            if (++count >= ptsSize) break;
         }
         if (count >= ptsSize) break;
     }
-    return pts;
+    eps.success = true;
+}
+
+emscripten::val E57Reader::ReadScanSync(int64_t scanIdx, int64_t ptsSize)
+{
+    ScanPromiseSig<Point> eps{ nullptr };
+    FetchScan(scanIdx, ptsSize, eps);
+    if (!eps.success)
+        throw std::runtime_error(eps.error);
+    return emscripten::val(std::move(eps.vec));
+}
+
+emscripten::val E57Reader::ReadScan(int64_t scanIdx, int64_t ptsSize)
+{
+    auto* p         = new EmPromise();
+    auto  jsPromise = p->take();
+    auto* eps       = new ScanPromiseSig<Point>{ p };
+
+    std::thread([this, scanIdx, ptsSize, eps]() {
+        try {
+            FetchScan(scanIdx, ptsSize, *eps);
+        } catch (const std::exception& e) {
+            eps->success = false;
+            eps->error   = e.what();
+        } catch (...) {
+            eps->success = false;
+            eps->error   = "Unknown error in ReadScan";
+        }
+
+        emscripten_async_run_in_main_runtime_thread(EM_FUNC_SIG_VI,
+        (void*)(+[](void* arg) {
+            auto* eps = static_cast<ScanPromiseSig<Point>*>(arg);
+            if (eps->success) {
+                eps->promise->resolve(emscripten::val(std::move(eps->vec)));
+            } else {
+                eps->promise->reject(eps->error);
+            }
+            delete eps->promise;
+            delete eps;
+        }), eps);
+    }).detach();
+    return jsPromise;
+}
+
+void E57Reader::FetchImage(int64_t imageIdx, ImagePromiseSig<uint8_t>& eps)
+{
+    Image2DProjection proj;
+    Image2DType       type, maskType, visType;
+    int64_t           w, h, size;
+
+    if (!this->mReader->GetImage2DSizes(imageIdx, proj, type,
+            w, h, size, maskType, visType)) {
+        eps.error   = "Cannot read image: GetImage2DSizes failed";
+        eps.success = false;
+        return;
+    }
+
+    eps.size = static_cast<int32_t>(size);
+    eps.ptr  = static_cast<uint8_t*>(malloc(eps.size));
+    const size_t rBytes = this->mReader->ReadImage2DData(
+        imageIdx, proj, type, eps.ptr, 0, eps.size);
+    eps.success = (static_cast<int64_t>(rBytes) == size);
+    if (!eps.success) {
+        free(eps.ptr);
+        eps.ptr   = nullptr;
+        eps.error = "Cannot read image: incomplete read";
+    }
+}
+
+emscripten::val E57Reader::ReadImageSync(int64_t imageIdx)
+{
+    ImagePromiseSig<uint8_t> eps{ nullptr };
+    FetchImage(imageIdx, eps);
+    if (!eps.success)
+        throw std::runtime_error(eps.error);
+    return emscripten::val::take_ownership(
+        EmPromise::arrayView<uint8_t>(eps.ptr, eps.size));
 }
 
 emscripten::val E57Reader::ReadImage(int64_t imageIdx)
 {
     auto* p         = new EmPromise();
     auto  jsPromise = p->take();
-    auto* eps       = new EmPromiseSig<uint8_t>{ p };
+    auto* eps       = new ImagePromiseSig<uint8_t>{ p };
 
     std::thread([this, imageIdx, eps]() {
-        Image2DProjection proj;
-        Image2DType       type, maskType, visType;
-        int64_t           w, h, size;
-
-        if (!this->mReader->GetImage2DSizes(imageIdx, proj, type,
-                w, h, size, maskType, visType)) {
-            eps->error   = "Cannot read image: GetImage2DSizes failed";
+        try {
+            FetchImage(imageIdx, *eps);
+        } catch (const std::exception& e) {
             eps->success = false;
-        } else {
-            eps->size = static_cast<int32_t>(size);
-            eps->ptr  = static_cast<uint8_t*>(malloc(eps->size));
-            const size_t rBytes = this->mReader->ReadImage2DData(
-                imageIdx, proj, type, eps->ptr, 0, eps->size);
-            eps->success = (static_cast<int64_t>(rBytes) == size);
-            if (!eps->success) {
-                free(eps->ptr);
-                eps->ptr   = nullptr;
-                eps->error = "Cannot read image: incomplete read";
-            }
+            eps->error   = e.what();
+        } catch (...) {
+            eps->success = false;
+            eps->error   = "Unknown error in ReadImage";
         }
 
         emscripten_async_run_in_main_runtime_thread(EM_FUNC_SIG_VI,
             (void*)(+[](void* arg) {
-                auto* eps = static_cast<EmPromiseSig<uint8_t>*>(arg);
+                auto* eps = static_cast<ImagePromiseSig<uint8_t>*>(arg);
                 if (eps->success) {
-                    // Zero-copy: Uint8Array views WASM SharedArrayBuffer directly.
-                    // FinalizationRegistry in _emjs_uint8array_view frees eps->ptr on GC.
                     eps->promise->resolve(
                         emscripten::val::take_ownership(
                             EmPromise::arrayView<uint8_t>(eps->ptr, eps->size))
@@ -181,22 +243,22 @@ bool E57Reader::IsReaderValid(int64_t scanIdx)
 
 void E57Reader::DestroyScanReader(int64_t scanIdx)
 {
-    if (this->mScanDataPoints[scanIdx] != nullptr)
+    auto ptsIt = this->mScanDataPoints.find(scanIdx);
+    if (ptsIt != this->mScanDataPoints.end() && ptsIt->second != nullptr)
     {
-        delete this->mScanDataPoints[scanIdx];
-        this->mScanDataPoints[scanIdx] = nullptr;
+        delete ptsIt->second;
+        ptsIt->second = nullptr;
     }
 
-    this->mScanReaders[scanIdx]->close();
+    auto readerIt = this->mScanReaders.find(scanIdx);
+    if (readerIt != this->mScanReaders.end())
+        readerIt->second->close();
 }
 
 E57Reader::~E57Reader()
 {
-    for (int64_t iScanPts = 0; iScanPts < this->mScanDataPoints.size(); iScanPts++)
-    {
-        Data3DPointsDouble* pointsDataPtr = this->mScanDataPoints[iScanPts];
-        if (pointsDataPtr != nullptr) delete pointsDataPtr;
-    }
+    for (auto& [key, ptr] : this->mScanDataPoints)
+        delete ptr;
 
     if (this->mReader->IsOpen()) this->mReader->Close();
     delete this->mReader;
