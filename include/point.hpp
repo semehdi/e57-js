@@ -17,4 +17,6 @@ public:
 
     Point(Data3DPointsDouble* pointData, int64_t idx);
     Point();
+
+    void transform(const RigidBodyTransform& t);
 };

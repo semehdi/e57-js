@@ -249,11 +249,6 @@ export class E57Reader {
         }
     }
 
-    TestPromise()
-    {
-        return this.reader.TestPromise();
-    }
-
     /**
      * Returns the file-level E57 header.
      *

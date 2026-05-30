@@ -4,40 +4,27 @@ E57Reader::E57Reader(const std::string& filePath) {
     this->mReader = new Reader(filePath);
 }
 
-emscripten::val E57Reader::TestPromise()
-{
-    auto* p = new EmPromise();
-    auto jsPromise = p->take();
-    std::thread([p]() {
-        emscripten_log(EM_LOG_CONSOLE, "TestPromise: thread running");
-        emscripten_async_run_in_main_runtime_thread(EM_FUNC_SIG_VI,
-            (void*)(+[](void* arg) {
-                auto* p = static_cast<EmPromise*>(arg);
-                p->resolve(emscripten::val(42));
-                delete p;
-            }), p);
-    }).detach();
-    return jsPromise;
-}
-
 E57Root E57Reader::GetHeader()
 {
     E57Root e57Root;
-    this->mReader->GetE57Root(e57Root);
+    if (!this->mReader->GetE57Root(e57Root))
+        throw std::runtime_error("Cannot read E57 file header");
     return e57Root;
 }
 
 Data3D E57Reader::GetData3DHeader(int64_t dataIdx)
 {
     Data3D data3DHeader;
-    this->mReader->ReadData3D(dataIdx, data3DHeader);
+    if (!this->mReader->ReadData3D(dataIdx, data3DHeader))
+        throw std::runtime_error("Cannot read scan header at index " + std::to_string(dataIdx));
     return data3DHeader;
 }
 
 ImageHeader E57Reader::GetImage2DHeader(int64_t imageIdx)
 {
     Image2D image2d;
-    this->mReader->ReadImage2D(imageIdx, image2d);
+    if (!this->mReader->ReadImage2D(imageIdx, image2d))
+        throw std::runtime_error("Cannot read image header at index " + std::to_string(imageIdx));
     Image2DProjection imageProjection;
     Image2DType imageType;
     int64_t imageWidth, imageHeight, imageSize;
@@ -69,7 +56,7 @@ int64_t E57Reader::GetImage2DCount()
     return this->mReader->GetImage2DCount();
 }
 
-void E57Reader::FetchScan(int64_t scanIdx, int64_t ptsSize, ScanPromiseSig<Point>& eps)
+void E57Reader::mReadScan(int64_t scanIdx, int64_t ptsSize, ScanPromiseSig<Point>& eps)
 {
     if (ptsSize < 0)
     {
@@ -87,20 +74,23 @@ void E57Reader::FetchScan(int64_t scanIdx, int64_t ptsSize, ScanPromiseSig<Point
     ptsSize = std::min(ptsSize, scanPtsCount);
     ptsSize = std::min(scanPtsCount - this->mReadPtsCount[scanIdx], ptsSize);
 
-    if (!this->IsReaderValid(scanIdx))
-        this->MakeScanReader(scanIdx, ptsSize);
+    if (!this->mIsReaderValid(scanIdx))
+        this->mMakeScanReader(scanIdx, ptsSize);
 
     Data3DPointsDouble* pointsData = this->mScanDataPoints[scanIdx];
     std::shared_ptr<CompressedVectorReader> dataReader = this->mScanReaders[scanIdx];
 
+    if (!pointsData || !dataReader)
+        throw std::runtime_error("Scan reader not initialized for index " + std::to_string(scanIdx));
+
     eps.vec.reserve(ptsSize);
 
     int64_t count = 0;
-    unsigned size = 0;
+    uint64_t size = 0;
 
     while (size = dataReader->read())
     {
-        for (long i = 0; i < size; i++)
+        for (int64_t i = 0; i < size; i++)
         {
             eps.vec.emplace_back(pointsData, i);
             this->mReadPtsCount[scanIdx]++;
@@ -114,7 +104,7 @@ void E57Reader::FetchScan(int64_t scanIdx, int64_t ptsSize, ScanPromiseSig<Point
 emscripten::val E57Reader::ReadScanSync(int64_t scanIdx, int64_t ptsSize)
 {
     ScanPromiseSig<Point> eps{ nullptr };
-    FetchScan(scanIdx, ptsSize, eps);
+    mReadScan(scanIdx, ptsSize, eps);
     if (!eps.success)
         throw std::runtime_error(eps.error);
     return emscripten::val(std::move(eps.vec));
@@ -128,7 +118,7 @@ emscripten::val E57Reader::ReadScan(int64_t scanIdx, int64_t ptsSize)
 
     std::thread([this, scanIdx, ptsSize, eps]() {
         try {
-            FetchScan(scanIdx, ptsSize, *eps);
+            mReadScan(scanIdx, ptsSize, *eps);
         } catch (const std::exception& e) {
             eps->success = false;
             eps->error   = e.what();
@@ -152,7 +142,7 @@ emscripten::val E57Reader::ReadScan(int64_t scanIdx, int64_t ptsSize)
     return jsPromise;
 }
 
-void E57Reader::FetchImage(int64_t imageIdx, ImagePromiseSig<uint8_t>& eps)
+void E57Reader::mReadImage(int64_t imageIdx, ImagePromiseSig<uint8_t>& eps)
 {
     Image2DProjection proj;
     Image2DType       type, maskType, visType;
@@ -180,7 +170,7 @@ void E57Reader::FetchImage(int64_t imageIdx, ImagePromiseSig<uint8_t>& eps)
 emscripten::val E57Reader::ReadImageSync(int64_t imageIdx)
 {
     ImagePromiseSig<uint8_t> eps{ nullptr };
-    FetchImage(imageIdx, eps);
+    mReadImage(imageIdx, eps);
     if (!eps.success)
         throw std::runtime_error(eps.error);
     return emscripten::val::take_ownership(
@@ -195,7 +185,7 @@ emscripten::val E57Reader::ReadImage(int64_t imageIdx)
 
     std::thread([this, imageIdx, eps]() {
         try {
-            FetchImage(imageIdx, *eps);
+            mReadImage(imageIdx, *eps);
         } catch (const std::exception& e) {
             eps->success = false;
             eps->error   = e.what();
@@ -222,26 +212,29 @@ emscripten::val E57Reader::ReadImage(int64_t imageIdx)
     return jsPromise;
 }
 
-void E57Reader::MakeScanReader(int64_t scanIdx, int64_t chunkSize)
+void E57Reader::mMakeScanReader(int64_t scanIdx, int64_t chunkSize)
 {
     Data3D scanHeader = this->GetData3DHeader(scanIdx);
     this->mScanDataPoints[scanIdx] = new Data3DPointsDouble(scanHeader);
-    this->mScanReaders[scanIdx] = this->mReader->SetUpData3DPointsData(scanIdx, chunkSize, *this->mScanDataPoints[scanIdx]);
+    auto reader = this->mReader->SetUpData3DPointsData(scanIdx, chunkSize, *this->mScanDataPoints[scanIdx]);
+    if (!reader)
+        throw std::runtime_error("Cannot set up scan reader at index " + std::to_string(scanIdx));
+    this->mScanReaders[scanIdx] = reader;
 }
 
 void E57Reader::ResetScanReader(int64_t scanIdx)
 {
-    this->DestroyScanReader(scanIdx);
+    this->mDestroyScanReader(scanIdx);
     this->mReadPtsCount[scanIdx] = 0;
 }
 
-bool E57Reader::IsReaderValid(int64_t scanIdx)
+bool E57Reader::mIsReaderValid(int64_t scanIdx)
 {
     Data3DPointsDouble* pointsDataPtr = this->mScanDataPoints[scanIdx];
     return pointsDataPtr != nullptr;
 }
 
-void E57Reader::DestroyScanReader(int64_t scanIdx)
+void E57Reader::mDestroyScanReader(int64_t scanIdx)
 {
     auto ptsIt = this->mScanDataPoints.find(scanIdx);
     if (ptsIt != this->mScanDataPoints.end() && ptsIt->second != nullptr)

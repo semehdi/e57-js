@@ -42,11 +42,11 @@ int64_t E57Writer::AddImageSync(
 {
     WriteImageSig sig{ nullptr };
     buildWriteImageSig(sig, image2DHeader, imageType, imageProjection, startPos, jsArray, byteCount, width, height);
-    FetchAddImage(sig);
+    mAddImage(sig);
     return sig.result;
 }
 
-void E57Writer::FetchAddImage(WriteImageSig& sig)
+void E57Writer::mAddImage(WriteImageSig& sig)
 {
     const size_t wBytes = this->mWriter->WriteImage2DData(
         sig.imgHeader, sig.imageType, sig.imageProjection,
@@ -73,7 +73,7 @@ emscripten::val E57Writer::AddImage(
 
     std::thread([this, sig]() {
         try {
-            FetchAddImage(*sig);
+            mAddImage(*sig);
         } catch (const std::exception& e) {
             sig->success = false;
             sig->error   = e.what();
@@ -134,7 +134,7 @@ static void fillPointsData(Data3DPointsDouble& pointsData, const emscripten::val
     }
 }
 
-void E57Writer::FetchAddScan(WriteScanSig& sig)
+void E57Writer::mAddScan(WriteScanSig& sig)
 {
     sig.result  = this->mWriter->WriteData3DData(sig.header, *sig.pointsData);
     sig.success = true;
@@ -166,7 +166,7 @@ emscripten::val E57Writer::AddScan(Data3D header, const emscripten::val& ptsArra
 
     std::thread([this, sig]() {
         try {
-            FetchAddScan(*sig);
+            mAddScan(*sig);
         } catch (const std::exception& e) {
             sig->success = false;
             sig->error   = e.what();

@@ -4,11 +4,11 @@
 #include <unordered_map>
 #include <vector>
 #include <thread>
+#include <cstdlib>
+#include <pthread.h>
 #include <emscripten.h>
 #include <emscripten/val.h>
 #include <emscripten/threading.h>
-#include <cstdlib>
-#include <pthread.h>
 
 #include "E57SimpleReader.h"
 #include "E57SimpleData.h"
@@ -17,6 +17,25 @@
 #include "em_promise.hpp"
 
 using namespace e57;
+
+template <typename T>
+struct ScanPromiseSig
+{
+    EmPromise*         promise;
+    std::vector<T>     vec;
+    std::string        error;
+    bool               success = false;
+};
+
+template <typename T>
+struct ImagePromiseSig
+{
+    EmPromise*  promise;
+    T*          ptr     = nullptr;
+    int32_t     size    = 0;
+    std::string error;
+    bool        success = false;
+};
 
 /**
  * @brief Thin Emscripten-friendly wrapper around libE57Format's SimpleReader.
@@ -137,16 +156,6 @@ public:
      */
     void ResetScanReader(int64_t scanIdx);
 
-    /**
-     * @brief Sanity-check Promise used during development.
-     *
-     * Spawns a thread that immediately posts back to the main thread and
-     * resolves the Promise with the integer `42`.
-     *
-     * @return JS Promise that resolves with `42`.
-     */
-    emscripten::val TestPromise();
-
     ~E57Reader();
 
 private:
@@ -155,18 +164,41 @@ private:
     std::unordered_map<int64_t, Data3DPointsDouble*> mScanDataPoints;
     std::unordered_map<int64_t, int64_t> mReadPtsCount;
 
-    /** Performs the actual image I/O for `imageIdx`, filling `eps` with the result. */
-    void FetchImage(int64_t imageIdx, ImagePromiseSig<uint8_t>& eps);
+    /**
+     * Core image I/O shared by `ReadImage` and `ReadImageSync`.
+     * @param imageIdx Zero-based image index.
+     * @param eps      Output: filled with the raw bytes buffer and byte count on success,
+     *                 or with an error string and `success = false` on failure.
+     */
+    void mReadImage(int64_t imageIdx, ImagePromiseSig<uint8_t>& eps);
 
-    /** Performs the actual scan I/O for `scanIdx`, filling `eps` with up to `ptsSize` points. */
-    void FetchScan(int64_t scanIdx, int64_t ptsSize, ScanPromiseSig<Point>& eps);
+    /**
+     * Core scan I/O shared by `ReadScan` and `ReadScanSync`.
+     * @param scanIdx  Zero-based scan index.
+     * @param ptsSize  Maximum number of points to read.
+     * @param eps      Output: filled with the point vector on success,
+     *                 or with an error string and `success = false` on failure.
+     */
+    void mReadScan(int64_t scanIdx, int64_t ptsSize, ScanPromiseSig<Point>& eps);
 
-    /** Allocates a `CompressedVectorReader` and its data buffer for `scanIdx`. */
-    void MakeScanReader(int64_t scanIdx, int64_t chunkSize);
+    /**
+     * Allocates a `Data3DPointsDouble` staging buffer and opens a
+     * `CompressedVectorReader` for the given scan.
+     * @param scanIdx   Zero-based scan index.
+     * @param chunkSize Number of points per read call.
+     * @throws std::runtime_error if `SetUpData3DPointsData` returns null.
+     */
+    void mMakeScanReader(int64_t scanIdx, int64_t chunkSize);
 
-    /** Releases the reader and data buffer for `scanIdx`. */
-    void DestroyScanReader(int64_t scanIdx);
+    /**
+     * Closes and releases the reader and staging buffer for the given scan.
+     * @param scanIdx Zero-based scan index. No-op if no reader is open.
+     */
+    void mDestroyScanReader(int64_t scanIdx);
 
-    /** Returns true if a `CompressedVectorReader` is currently open for `scanIdx`. */
-    bool IsReaderValid(int64_t scanIdx);
+    /**
+     * @param scanIdx Zero-based scan index.
+     * @return `true` if a `Data3DPointsDouble` buffer is allocated for `scanIdx`.
+     */
+    bool mIsReaderValid(int64_t scanIdx);
 };

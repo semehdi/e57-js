@@ -659,7 +659,8 @@ EMSCRIPTEN_BINDINGS(e57) {
         .property("isTimeStampInvalid", &Point::isTimeStampInvalid)
         .property("normalX", &Point::normalX)
         .property("normalY", &Point::normalY)
-        .property("normalZ", &Point::normalZ);
+        .property("normalZ", &Point::normalZ)
+        .function("transform", &Point::transform);
 
     class_<E57Reader>("E57Reader")
         .constructor<const std::string&>()
@@ -671,8 +672,7 @@ EMSCRIPTEN_BINDINGS(e57) {
         .function("ReadScan", &E57Reader::ReadScan)
         .function("ReadScanSync", &E57Reader::ReadScanSync)
         .function("ReadImage", &E57Reader::ReadImage)
-        .function("ReadImageSync", &E57Reader::ReadImageSync)
-        .function("TestPromise", &E57Reader::TestPromise);
+        .function("ReadImageSync", &E57Reader::ReadImageSync);
 
     class_<E57Writer>("E57Writer")
         .constructor<const std::string&>()
