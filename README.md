@@ -221,3 +221,8 @@ For more examples of how to read and write E57 files with this library, have a l
 - [tests/io.test.js](tests/io.test.js) — synchronous read/write examples
 - [tests/io.async.test.js](tests/io.async.test.js) — async read/write examples
 
+---
+
+## License
+
+MIT License
