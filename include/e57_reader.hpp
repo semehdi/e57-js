@@ -18,6 +18,12 @@
 
 using namespace e57;
 
+enum CoordinatesSystem {
+  CARTESIAN,
+  SPHERICAL,
+  CYLINDRICAL
+};
+
 template <typename T>
 struct ScanPromiseSig
 {
@@ -76,6 +82,11 @@ public:
     int64_t GetImage2DCount();
 
     /**
+     * @brief Returns the coordinates system of the points of a scan
+     */
+    CoordinatesSystem ScanCoordinatesSystem(int64_t scanIdx);
+
+    /**
      * @brief Returns the `Data3D` header for a single scan.
      * @param dataIdx Zero-based scan index.
      * @return Populated `Data3D` struct.
@@ -105,7 +116,7 @@ public:
      * @return JS Promise that resolves with a `VectorPoint`, or rejects with
      *         an error string if `ptsSize < 0`.
      */
-    emscripten::val ReadScan(int64_t scanIdx, int64_t ptsSize);
+    emscripten::val ReadScan(int64_t scanIdx, int64_t ptsSize, bool transform = true);
 
     /**
      * @brief Reads up to `ptsSize` points from the scan at `scanIdx` synchronously.
@@ -118,7 +129,7 @@ public:
      * @return `VectorPoint` (Emscripten-bound `std::vector<Point>`).
      * @throws std::runtime_error if `ptsSize < 0`.
      */
-    emscripten::val ReadScanSync(int64_t scanIdx, int64_t ptsSize);
+    emscripten::val ReadScanSync(int64_t scanIdx, int64_t ptsSize, bool transform = true);
 
     /**
      * @brief Reads the raw image bytes for the image at `imageIdx` asynchronously.
@@ -178,8 +189,9 @@ private:
      * @param ptsSize  Maximum number of points to read.
      * @param eps      Output: filled with the point vector on success,
      *                 or with an error string and `success = false` on failure.
+     * @param transform Set to true to transform scan coordinates into the file-level coordinate system.
      */
-    void mReadScan(int64_t scanIdx, int64_t ptsSize, ScanPromiseSig<Point>& eps);
+    void mReadScan(int64_t scanIdx, int64_t ptsSize, ScanPromiseSig<Point>& eps, bool transform);
 
     /**
      * Allocates a `Data3DPointsDouble` staging buffer and opens a

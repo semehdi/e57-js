@@ -19,4 +19,7 @@ public:
     Point();
 
     void transform(const RigidBodyTransform& t);
+
+    void cartesianToSpherical();
+    void sphericalToCartesian();
 };

@@ -279,10 +279,10 @@ export class E57Writer
     {
         const buffer     = fs.readFileSync(image.getPath());
         const bufferData = new Uint8Array(buffer);
-        return this.writer.AddImageSync(
+        return Number(this.writer.AddImageSync(
             image.getHeader(), image.getType(), image.getProjection(),
             0, bufferData, bufferData.length, width, height
-        );
+        ));
     }
 
     /**
@@ -302,7 +302,7 @@ export class E57Writer
         return this.writer.AddImage(
             image.getHeader(), image.getType(), image.getProjection(),
             0, bufferData, bufferData.length, meta.width, meta.height
-        );
+        ).then(Number);
     }
 
     /**
@@ -314,7 +314,7 @@ export class E57Writer
      */
     AddScanSync(scanHeader, points)
     {
-        return this.writer.AddScanSync(scanHeader, points);
+        return Number(this.writer.AddScanSync(scanHeader, points));
     }
 
     /**
@@ -327,7 +327,7 @@ export class E57Writer
      */
     AddScan(scanHeader, points)
     {
-        return this.writer.AddScan(scanHeader, points);
+        return this.writer.AddScan(scanHeader, points).then(Number);
     }
 
     /**

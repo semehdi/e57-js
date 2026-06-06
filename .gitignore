@@ -69,6 +69,8 @@ Testing/
 .cache/
 dist
 node_modules
+.env
+.github
 *.e57
 
 # Images

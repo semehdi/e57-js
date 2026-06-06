@@ -1,8 +1,6 @@
 FROM gcc
 
-ENV PATH="/deps/emsdk:${PATH}"
-ENV PATH="/deps/emsdk/upstream/emscripten:${PATH}"
-ENV PATH="/deps/emsdk/node/22.16.0_64bit/bin:${PATH}"
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 WORKDIR /deps
 
@@ -13,6 +11,10 @@ RUN git clone https://github.com/emscripten-core/emsdk.git \
     && ./emsdk install latest \
     && ./emsdk activate latest
 
+ENV PATH="/deps/emsdk:${PATH}"
+ENV PATH="/deps/emsdk/upstream/emscripten:${PATH}"
+ENV PATH="/deps/emsdk/node/22.16.0_64bit/bin:${PATH}"
+
 WORKDIR /app
 
-ENTRYPOINT [ "/bin/bash" ]
+CMD ["bash"]

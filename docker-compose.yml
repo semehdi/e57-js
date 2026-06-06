@@ -1,0 +1,27 @@
+name: e57-js
+
+services:
+  build-wasm:
+    build: .
+    volumes:
+      - .:/src
+      - wasm-build:/src/build
+    working_dir: /src
+    command: >
+      sh -c "cd build &&
+             [ -f CMakeCache.txt ] || emcmake cmake .. &&
+             emmake make -j$(nproc)"
+
+  publish:
+    image: node:20-slim
+    depends_on:
+      build-wasm:
+        condition: service_completed_successfully
+    volumes:
+      - .:/src
+      - wasm-build:/src/build
+    working_dir: /src
+    command: sh scripts/docker-build.sh
+
+volumes:
+  wasm-build:

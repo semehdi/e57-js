@@ -34,11 +34,22 @@ export class E57ReaderScan {
      *
      * @returns {Promise<Point[]>} Resolves with the full array of `Point` objects.
      */
-    ReadScan()
+    ReadScan(transform = true)
     {
         var scanHeader = this.GetHeader();
         var scanPtsCount = scanHeader.pointCount;
-        return this.ReadPoints(scanPtsCount);
+        return this.ReadPoints(scanPtsCount, transform);
+    }
+
+    /**
+     * Reads all points in this scan synchronously. Blocks until complete.
+     *
+     * @returns {VectorPoint}
+     */
+    ReadScanSync(transform = true)
+    {
+        const scanPtsCount = Number(this.GetHeader().pointCount);
+        return this.ReadPointsSync(scanPtsCount, transform);
     }
 
     /**
@@ -47,9 +58,9 @@ export class E57ReaderScan {
      * @param {number} ptsCount - Maximum number of points to read.
      * @returns {Promise<VectorPoint>} Resolves with a `VectorPoint`.
      */
-    ReadPoints(ptsCount)
+    ReadPoints(ptsCount, transform = true)
     {
-        return this.e57Reader.ReadScan(this.scanIdx, ptsCount);
+        return this.e57Reader.ReadScan(this.scanIdx, ptsCount, transform);
     }
 
     /**
@@ -58,9 +69,9 @@ export class E57ReaderScan {
      * @param {number} ptsCount - Maximum number of points to read.
      * @returns {VectorPoint}
      */
-    ReadPointsSync(ptsCount)
+    ReadPointsSync(ptsCount, transform = true)
     {
-        return this.e57Reader.ReadScanSync(this.scanIdx, ptsCount);
+        return this.e57Reader.ReadScanSync(this.scanIdx, ptsCount, transform);
     }
 
     /**
@@ -85,20 +96,20 @@ export class E57ReaderScan {
      * // collect all chunks
      * const chunks = await scan.ScanPoints(1000);
      */
-    async ScanPoints(chunkSize, callback)
+    ScanPoints(chunkSize, callback, transform = true)
     {
-        const scanPtsCount = this.GetHeader().pointCount;
+        const scanPtsCount = Number(this.GetHeader().pointCount);
         const chunks = Math.ceil(scanPtsCount / chunkSize);
 
         if (callback) {
             for (let iChunk = 0; iChunk < chunks; iChunk++)
-                await this.ReadPoints(chunkSize).then(callback);
+                callback(this.ReadPointsSync(chunkSize, transform));
             return;
         }
 
         const results = [];
         for (let iChunk = 0; iChunk < chunks; iChunk++)
-            results.push(await this.ReadPoints(chunkSize));
+            results.push(this.ReadPointsSync(chunkSize, transform));
         return results;
     }
 
@@ -266,7 +277,7 @@ export class E57Reader {
      */
     GetData3DCount()
     {
-        return this.reader.GetData3DCount();
+        return Number(this.reader.GetData3DCount());
     }
 
     /**
@@ -276,7 +287,7 @@ export class E57Reader {
      */
     GetImage2DCount()
     {
-        return this.reader.GetImage2DCount();
+        return Number(this.reader.GetImage2DCount());
     }
 
     /**

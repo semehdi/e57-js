@@ -1,4 +1,5 @@
 #include "point.hpp"
+#include <cmath>
 
 Point::Point(Data3DPointsDouble* pointData, int64_t idx)
 {
@@ -49,3 +50,20 @@ void Point::transform(const RigidBodyTransform& t)
     cartesianY += 2.0 * (qw * cy + ccy) + t.translation.y;
     cartesianZ += 2.0 * (qw * cz + ccz) + t.translation.z;
 }
+
+void Point::cartesianToSpherical()
+{
+    const double r = std::sqrt(cartesianX * cartesianX + cartesianY * cartesianY + cartesianZ * cartesianZ);
+    sphericalAzimuth   = std::atan2(cartesianY, cartesianX);
+    sphericalElevation = std::asin(cartesianZ / r);
+    sphericalRange     = r;
+}
+
+void Point::sphericalToCartesian()
+{
+    const double cosEl = std::cos(sphericalElevation);
+    cartesianX = sphericalRange * cosEl * std::cos(sphericalAzimuth);
+    cartesianY = sphericalRange * cosEl * std::sin(sphericalAzimuth);
+    cartesianZ = sphericalRange * std::sin(sphericalElevation);
+}
+

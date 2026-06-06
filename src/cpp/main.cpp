@@ -419,6 +419,7 @@ EMSCRIPTEN_BINDINGS(e57) {
         .function("notEquals", &ColorLimits::operator!=);
 
     class_<DateTime>("DateTime")
+        .constructor<>()
         .property("dateTimeValue", &DateTime::dateTimeValue)
         .property("isAtomicClockReferenced", &DateTime::isAtomicClockReferenced)
         .function("equals", &DateTime::operator==)
@@ -616,7 +617,7 @@ EMSCRIPTEN_BINDINGS(e57) {
         .property("name", &ImageHeader::name)
         .property("guid", &ImageHeader::guid)
         .property("description", &ImageHeader::description)
-        .property("acquisitionDateTime", &ImageHeader::acquisitionDateTime)
+        .property("acquisitionDateTime", &ImageHeader::acquisitionDateTime, return_value_policy::reference())
         .property("associatedData3DGuid", &ImageHeader::associatedData3DGuid)
         .property("sensorVendor", &ImageHeader::sensorVendor)
         .property("sensorModel", &ImageHeader::sensorModel)
@@ -632,7 +633,8 @@ EMSCRIPTEN_BINDINGS(e57) {
         .property("height", &ImageHeader::height)
         .property("imageMaskType", &ImageHeader::imageMaskType)
         .property("imageVisualType", &ImageHeader::imageVisualType)
-        .property("imageSize", &ImageHeader::imageSize);
+        .property("imageSize", &ImageHeader::imageSize)
+        .function("setAcquisitionDateTime", &ImageHeader::setAcquisitionDateTime);
 
     class_<ReaderOptions>("ReaderOptions")
         .property("checksumPolicy", &ReaderOptions::checksumPolicy, return_value_policy::reference());
@@ -660,7 +662,9 @@ EMSCRIPTEN_BINDINGS(e57) {
         .property("normalX", &Point::normalX)
         .property("normalY", &Point::normalY)
         .property("normalZ", &Point::normalZ)
-        .function("transform", &Point::transform);
+        .function("transform",              &Point::transform)
+        .function("cartesianToSpherical",   &Point::cartesianToSpherical)
+        .function("sphericalToCartesian",   &Point::sphericalToCartesian);
 
     class_<E57Reader>("E57Reader")
         .constructor<const std::string&>()
@@ -672,7 +676,8 @@ EMSCRIPTEN_BINDINGS(e57) {
         .function("ReadScan", &E57Reader::ReadScan)
         .function("ReadScanSync", &E57Reader::ReadScanSync)
         .function("ReadImage", &E57Reader::ReadImage)
-        .function("ReadImageSync", &E57Reader::ReadImageSync);
+        .function("ReadImageSync", &E57Reader::ReadImageSync)
+        .function("ScanCoordinatesSystem", &E57Reader::ScanCoordinatesSystem);
 
     class_<E57Writer>("E57Writer")
         .constructor<const std::string&>()

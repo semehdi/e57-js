@@ -34,4 +34,9 @@ public:
       ImageHeader();
       ImageHeader(const Image2D& image2d);
       Image2D ToImage2D();
+
+      void setAcquisitionDateTime(double dateTimeValue, int32_t isAtomicClockReferenced) {
+          acquisitionDateTime.dateTimeValue = dateTimeValue;
+          acquisitionDateTime.isAtomicClockReferenced = isAtomicClockReferenced;
+      }
 };

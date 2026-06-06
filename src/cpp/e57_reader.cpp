@@ -56,7 +56,17 @@ int64_t E57Reader::GetImage2DCount()
     return this->mReader->GetImage2DCount();
 }
 
-void E57Reader::mReadScan(int64_t scanIdx, int64_t ptsSize, ScanPromiseSig<Point>& eps)
+CoordinatesSystem E57Reader::ScanCoordinatesSystem(int64_t scanIdx)
+{
+    const Data3D scanHeader = this->GetData3DHeader(scanIdx);
+    const bool isSpherical = scanHeader.pointFields.sphericalRangeField && scanHeader.pointFields.sphericalAzimuthField && scanHeader.pointFields.sphericalElevationField;
+    const bool isCartesian = scanHeader.pointFields.cartesianXField && scanHeader.pointFields.cartesianYField && scanHeader.pointFields.cartesianZField;
+    if (isSpherical) return CoordinatesSystem::SPHERICAL;
+    if (isCartesian) return CoordinatesSystem::CARTESIAN;
+    return CoordinatesSystem::CYLINDRICAL;
+}
+
+void E57Reader::mReadScan(int64_t scanIdx, int64_t ptsSize, ScanPromiseSig<Point>& eps, bool transform)
 {
     if (ptsSize < 0)
     {
@@ -85,6 +95,8 @@ void E57Reader::mReadScan(int64_t scanIdx, int64_t ptsSize, ScanPromiseSig<Point
 
     eps.vec.reserve(ptsSize);
 
+    const CoordinatesSystem scanSystem = this->ScanCoordinatesSystem(scanIdx);
+
     int64_t count = 0;
     uint64_t size = 0;
 
@@ -92,7 +104,15 @@ void E57Reader::mReadScan(int64_t scanIdx, int64_t ptsSize, ScanPromiseSig<Point
     {
         for (int64_t i = 0; i < size; i++)
         {
-            eps.vec.emplace_back(pointsData, i);
+            Point point = Point(pointsData, i);
+
+            if (transform)
+            {
+                if (scanSystem == CoordinatesSystem::SPHERICAL) point.sphericalToCartesian();
+                point.transform(scanHeader.pose);
+            }
+
+            eps.vec.emplace_back(point);
             this->mReadPtsCount[scanIdx]++;
             if (++count >= ptsSize) break;
         }
@@ -101,24 +121,24 @@ void E57Reader::mReadScan(int64_t scanIdx, int64_t ptsSize, ScanPromiseSig<Point
     eps.success = true;
 }
 
-emscripten::val E57Reader::ReadScanSync(int64_t scanIdx, int64_t ptsSize)
+emscripten::val E57Reader::ReadScanSync(int64_t scanIdx, int64_t ptsSize, bool transform)
 {
     ScanPromiseSig<Point> eps{ nullptr };
-    mReadScan(scanIdx, ptsSize, eps);
+    mReadScan(scanIdx, ptsSize, eps, transform);
     if (!eps.success)
         throw std::runtime_error(eps.error);
     return emscripten::val(std::move(eps.vec));
 }
 
-emscripten::val E57Reader::ReadScan(int64_t scanIdx, int64_t ptsSize)
+emscripten::val E57Reader::ReadScan(int64_t scanIdx, int64_t ptsSize, bool transform)
 {
     auto* p         = new EmPromise();
     auto  jsPromise = p->take();
     auto* eps       = new ScanPromiseSig<Point>{ p };
 
-    std::thread([this, scanIdx, ptsSize, eps]() {
+    std::thread([this, scanIdx, ptsSize, eps, transform]() {
         try {
-            mReadScan(scanIdx, ptsSize, *eps);
+            mReadScan(scanIdx, ptsSize, *eps, transform);
         } catch (const std::exception& e) {
             eps->success = false;
             eps->error   = e.what();
