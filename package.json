@@ -25,6 +25,10 @@
   ],
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/semehdi/e57-js"
+  },
   "exports": {
     ".": {
       "import": "./dist/index.mjs",
