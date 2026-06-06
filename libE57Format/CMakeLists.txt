@@ -79,7 +79,9 @@ endif()
 find_package( Threads REQUIRED )
 #find_package( XercesC 3.2 REQUIRED )
 
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 add_subdirectory(extern/xerces)
+set(CMAKE_POSITION_INDEPENDENT_CODE OFF)
 
 option( E57_BUILD_SHARED
 	"Compile E57Format as a shared library"
