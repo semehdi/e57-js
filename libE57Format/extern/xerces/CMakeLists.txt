@@ -166,7 +166,9 @@ install(
 # Process subdirectories
 add_subdirectory(doc)
 add_subdirectory(src)
-add_subdirectory(tests)
+if(BUILD_TESTING)
+  add_subdirectory(tests)
+endif()
 add_subdirectory(samples)
 
 # Display configuration summary
