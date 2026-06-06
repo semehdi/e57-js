@@ -7,6 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_compile_options(-pthread)
 
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 add_subdirectory(libE57Format)
 
 file(GLOB SOURCES src/cpp/*.cpp)
