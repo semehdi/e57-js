@@ -9,7 +9,7 @@ services:
     working_dir: /src
     command: >
       sh -c "cd build &&
-             [ -f CMakeCache.txt ] || emcmake cmake .. -DBUILD_TESTING=OFF &&
+             [ -f CMakeCache.txt ] || emcmake cmake .. &&
              emmake make -j$(nproc)"
 
   publish:
