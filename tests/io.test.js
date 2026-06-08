@@ -482,6 +482,66 @@ describe('SimpleWriter', () => {
         assert.equal(Number(reader.GetScan(1).GetHeader().pointCount), 8)
     })
 
+    it('MultipleScans read points from all scans', () => {
+        const filePath  = path.join(OUTPUT_DIR, 'MultipleScansReadPoints.e57')
+        const numPoints = 500
+        const writer    = new E57Writer(filePath)
+
+        const makeHeader = (guid) => {
+            const h = new E57.LibE57.Data3D()
+            h.guid = guid
+            h.pointFields.cartesianXField = true
+            h.pointFields.cartesianYField = true
+            h.pointFields.cartesianZField = true
+            return h
+        }
+
+        // scan 0: x = i, y = 0, z = 0
+        writer.AddScanSync(makeHeader('multi-scan-read-0'), Array.from({ length: numPoints }, (_, i) => {
+            const pt = new E57.LibE57.Point()
+            pt.cartesianX = i; pt.cartesianY = 0; pt.cartesianZ = 0
+            return pt
+        }))
+
+        // scan 1: x = 0, y = i, z = 0
+        writer.AddScanSync(makeHeader('multi-scan-read-1'), Array.from({ length: numPoints }, (_, i) => {
+            const pt = new E57.LibE57.Point()
+            pt.cartesianX = 0; pt.cartesianY = i; pt.cartesianZ = 0
+            return pt
+        }))
+
+        writer.Close()
+
+        const reader = testsUtils.openReader(filePath)
+        assert.equal(Number(reader.GetData3DCount()), 2)
+
+        // read scan 0 in chunks — leaves its CompressedVectorReader open after the last chunk
+        let total0 = 0
+        reader.GetScan(0).ScanPoints(100, (chunk) => {
+            for (let i = 0; i < chunk.size(); i++) {
+                const pt = chunk.get(i)
+                assert.equal(Number(pt.cartesianX), total0 + i)
+                assert.equal(Number(pt.cartesianY), 0)
+                assert.equal(Number(pt.cartesianZ), 0)
+            }
+            total0 += chunk.size()
+        })
+        assert.equal(total0, numPoints)
+
+        // read scan 1 in chunks — previously threw E57Exception because scan 0's reader was still open
+        let total1 = 0
+        reader.GetScan(1).ScanPoints(100, (chunk) => {
+            for (let i = 0; i < chunk.size(); i++) {
+                const pt = chunk.get(i)
+                assert.equal(Number(pt.cartesianX), 0)
+                assert.equal(Number(pt.cartesianY), total1 + i)
+                assert.equal(Number(pt.cartesianZ), 0)
+            }
+            total1 += chunk.size()
+        })
+        assert.equal(total1, numPoints)
+    })
+
     it('SphericalCubePoints', () => {
         const filePath = path.join(OUTPUT_DIR, 'SphericalCubePoints.e57')
         const random = testsUtils.createRandom(42)
