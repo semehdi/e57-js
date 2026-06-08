@@ -234,6 +234,24 @@ emscripten::val E57Reader::ReadImage(int64_t imageIdx)
 
 void E57Reader::mMakeScanReader(int64_t scanIdx, int64_t chunkSize)
 {
+    for (auto& [idx, reader] : this->mScanReaders)
+    {
+        if (idx != scanIdx && reader)
+        {
+            reader->close();
+            reader.reset();
+        }
+    }
+    
+    for (auto& [idx, ptr] : this->mScanDataPoints)
+    {
+        if (idx != scanIdx && ptr)
+        {
+            delete ptr;
+            ptr = nullptr;
+        }
+    }
+
     Data3D scanHeader = this->GetData3DHeader(scanIdx);
     this->mScanDataPoints[scanIdx] = new Data3DPointsDouble(scanHeader);
     auto reader = this->mReader->SetUpData3DPointsData(scanIdx, chunkSize, *this->mScanDataPoints[scanIdx]);
