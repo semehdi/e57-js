@@ -45,6 +45,8 @@ export class E57 {
      */
     static Init()
     {
+        const isBrowser = typeof window !== 'undefined';
+        
         if (E57.LibE57 !== null)
             return Promise.resolve();
 

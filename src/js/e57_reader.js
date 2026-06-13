@@ -239,10 +239,9 @@ export class E57Reader {
      *
      * @param {string} filePath - Absolute or relative path to the `.e57` file.
      */
-    constructor(filePath)
+    constructor(filePath, isMemFS = false)
     {
-        const absInputPath = path.resolve(filePath);
-        const inputFilePath = path.join(E57.RootDir, absInputPath);
+        const inputFilePath = isMemFS ? filePath : path.join(E57.RootDir, path.resolve(filePath));
         this.reader = new E57.LibE57.E57Reader(inputFilePath);
 
         var scansCount = this.GetData3DCount();
@@ -258,6 +257,31 @@ export class E57Reader {
         {
             this.images[iImage] = new E57ReaderImage(this.reader, iImage);
         }
+    }
+
+    /**
+     * Opens an E57 file from an in-memory buffer rather than a file path.
+     *
+     * The buffer is written to the Emscripten in-memory filesystem at
+     * `/input.e57` and then opened via the normal `E57Reader` constructor.
+     * Useful when the file has already been loaded into memory (e.g. via
+     * `fs.readFileSync`, a network fetch, or a browser `File` object).
+     *
+     * @param {Uint8Array|Buffer} buffer - Raw bytes of the `.e57` file.
+     * @returns {E57Reader} A fully initialised reader instance.
+     *
+     * @example
+     * await E57.Init()
+     * const buffer = fs.readFileSync('scan.e57')
+     * const reader = E57Reader.FromBuffer(buffer)
+     * console.log(reader.GetData3DCount())
+     */
+    static FromBuffer(buffer)
+    {
+        const memFsFilePath = "/input.e57";
+        E57.LibE57.FS.writeFile(memFsFilePath, buffer);
+        console.log("Done ");
+        return new E57Reader(memFsFilePath, true);
     }
 
     /**
