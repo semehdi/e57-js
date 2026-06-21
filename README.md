@@ -12,7 +12,9 @@ JavaScript library for reading and writing **E57 point cloud files**, compatible
 npm install e57-js
 ```
 
-Requires **Node.js 18 or higher**.
+Requires **Node.js 18 or higher**, or any modern browser with WebAssembly support.
+
+In the browser, file-system access is not available — use `E57Reader.FromBuffer(buffer)` to read from a `Uint8Array` and `E57Writer.ToBuffer()` to write to one.
 
 ---
 
