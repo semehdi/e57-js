@@ -35,6 +35,24 @@ export class E57WriterImage
     }
 
     /**
+     * Creates an `E57WriterImage` from a `Uint8Array` instead of a file path.
+     * Use this in the browser or any context where the file system is unavailable.
+     *
+     * @param {Uint8Array} buffer          - Raw image bytes.
+     * @param {number}     imageType       - `Image2DType` enum value.
+     * @param {number}     imageProjection - `Image2DProjection` enum value.
+     * @returns {E57WriterImage}
+     */
+    static FromBuffer(buffer, imageType, imageProjection)
+    {
+        const img = new E57WriterImage(null, imageType, imageProjection);
+        img._buffer = buffer;
+        img._width = null;
+        img._height = null;
+        return img;
+    }
+
+    /**
      * Returns the source image path.
      *
      * @returns {string}
@@ -89,13 +107,49 @@ export class E57WriterImage
     }
 
     /**
-     * Returns the raw sharp metadata for the source image.
+     * Resolves image dimensions, using the environment-appropriate API.
+     * In the browser, uses `createImageBitmap`; in Node.js, uses `sharp`.
+     * The result is cached after the first call.
      *
-     * @returns {Promise<import('sharp').Metadata>}
+     * @returns {Promise<{width: number, height: number}>}
+     */
+    _resolveMetadata()
+    {
+        if (this._width != null && this._height != null)
+            return Promise.resolve({ width: this._width, height: this._height });
+
+        if (this._metadataPromise) return this._metadataPromise;
+
+        if (typeof window !== 'undefined') {
+            this._metadataPromise = this.getBuffer().then(buf => {
+                const blob = new Blob([buf])
+                return createImageBitmap(blob).then(bitmap => {
+                    const meta = { width: bitmap.width, height: bitmap.height }
+                    bitmap.close()
+                    this._width  = meta.width
+                    this._height = meta.height
+                    return meta
+                })
+            })
+        } else {
+            this._metadataPromise = this.getBuffer().then(buf => sharp(buf).metadata()).then(meta => {
+                this._width  = meta.width
+                this._height = meta.height
+                return meta
+            })
+        }
+
+        return this._metadataPromise;
+    }
+
+    /**
+     * Returns image metadata. Uses `sharp` in Node.js and `createImageBitmap` in the browser.
+     *
+     * @returns {Promise<{width: number, height: number}>}
      */
     getMetadata()
     {
-        return sharp(this._imgPath).metadata();
+        return this._resolveMetadata();
     }
 
     /**
@@ -103,28 +157,25 @@ export class E57WriterImage
      *
      * @returns {Promise<[number, number]>}
      */
-    async getDimensions()
+    getDimensions()
     {
-        const meta = await sharp(this._imgPath).metadata();
-        return [meta.width, meta.height];
+        return this._resolveMetadata().then(meta => [meta.width, meta.height]);
     }
 
     /**
      * @returns {Promise<number>} Width in pixels.
      */
-    async getWidth()
+    getWidth()
     {
-        const meta = await sharp(this._imgPath).metadata();
-        return meta.width;
+        return this._resolveMetadata().then(meta => meta.width);
     }
 
     /**
      * @returns {Promise<number>} Height in pixels.
      */
-    async getHeight()
+    getHeight()
     {
-        const meta = await sharp(this._imgPath).metadata();
-        return meta.height;
+        return this._resolveMetadata().then(meta => meta.height);
     }
 
     /**
@@ -200,12 +251,18 @@ export class E57WriterImage
     /**
      * Reads the source image from disk and returns its bytes as a `Uint8Array`.
      *
-     * @returns {Promise<Uint8Array>}
+     * @returns {Uint8Array}
      */
-    async getBuffer()
+    getBufferSync()
     {
-        const buffer = await fs.promises.readFile(this.getPath());
-        return new Uint8Array(buffer);
+        if (this._buffer) return this._buffer;
+        return new Uint8Array(fs.readFileSync(this.getPath()));
+    }
+
+    getBuffer()
+    {
+        if (this._buffer) return Promise.resolve(this._buffer);
+        return fs.promises.readFile(this.getPath()).then(buf => new Uint8Array(buf));
     }
 
     /**
@@ -289,43 +346,19 @@ export class E57Writer
     }
 
     /**
-     * Reads the image buffer from disk and writes it to the E57 file synchronously.
-     * Blocks until the write is complete. Width and height must be provided since
-     * there is no synchronous image metadata API available in JS.
-     *
-     * @param {E57WriterImage} image  - The image to write.
-     * @param {number}         width  - Image width in pixels.
-     * @param {number}         height - Image height in pixels.
-     * @returns {number} Number of bytes written.
-     */
-    AddImageSync(image, width, height)
-    {
-        const buffer     = fs.readFileSync(image.getPath());
-        const bufferData = new Uint8Array(buffer);
-        return Number(this.writer.AddImageSync(
-            image.getHeader(), image.getType(), image.getProjection(),
-            0, bufferData, bufferData.length, width, height
-        ));
-    }
-
-    /**
      * Reads the image buffer from disk and writes it to the E57 file asynchronously.
      * The write I/O runs on a background thread.
      *
      * @param {E57WriterImage} image - The image to write.
      * @returns {Promise<number>} Resolves with the number of bytes written.
      */
-    async AddImage(image)
+    AddImage(image)
     {
-        const [buffer, meta] = await Promise.all([
-            image.getBuffer(),
-            sharp(image.getPath()).metadata()
-        ]);
-        const bufferData = new Uint8Array(buffer);
-        return this.writer.AddImage(
-            image.getHeader(), image.getType(), image.getProjection(),
-            0, bufferData, bufferData.length, meta.width, meta.height
-        ).then(Number);
+        return Promise.all([image.getBuffer(), image.getMetadata()])
+            .then(([bufferData, meta]) => this.writer.AddImage(
+                image.getHeader(), image.getType(), image.getProjection(),
+                0, bufferData, bufferData.length, meta.width, meta.height
+            ).then(Number));
     }
 
     /**

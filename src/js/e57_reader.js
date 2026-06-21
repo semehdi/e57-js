@@ -210,6 +210,9 @@ export class E57ReaderImage
      */
     Save(filePath)
     {
+        if (typeof window !== 'undefined')
+            throw new Error('Save() is not available in the browser — use ReadImage() to get a Uint8Array instead')
+
         const outExtension = this.Extension();
         const newFilePath = filePath.replace(path.extname(filePath), outExtension);
         return this.ReadImage().then((imgData) => {
@@ -334,5 +337,13 @@ export class E57Reader {
     GetImage(imageIdx)
     {
         return this.images[imageIdx];
+    }
+
+    /**
+     * Closes the underlying E57 reader and releases its resources.
+     */
+    Close()
+    {
+        this.reader.Close();
     }
 }

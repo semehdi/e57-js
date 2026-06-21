@@ -167,6 +167,14 @@ public:
      */
     void ResetScanReader(int64_t scanIdx);
 
+    /**
+     * @brief Closes the underlying E57 file and releases all scan resources.
+     *
+     * Safe to call before the object is destroyed. The destructor will not
+     * double-close or double-free after this call.
+     */
+    void Close();
+
     ~E57Reader();
 
 private:

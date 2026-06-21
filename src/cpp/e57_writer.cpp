@@ -9,7 +9,7 @@ static void buildWriteImageSig(WriteImageSig& sig, ImageHeader image2DHeader, Im
     Image2DProjection imageProjection, int64_t startPos, const emscripten::val& jsArray,
     int64_t byteCount, int32_t width, int32_t height)
 {
-    sig.data            = emscripten::vecFromJSArray<uint8_t>(jsArray);
+    sig.data            = emscripten::convertJSArrayToNumberVector<uint8_t>(jsArray);
     sig.imgHeader       = image2DHeader.ToImage2D();
     sig.imageType       = imageType;
     sig.imageProjection = imageProjection;

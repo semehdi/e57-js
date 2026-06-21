@@ -286,10 +286,20 @@ void E57Reader::mDestroyScanReader(int64_t scanIdx)
         readerIt->second->close();
 }
 
+void E57Reader::Close()
+{
+    for (auto& [key, ptr] : this->mScanDataPoints)
+        if (ptr != nullptr) delete ptr;
+    this->mScanDataPoints.clear();
+    this->mScanReaders.clear();
+
+    if (this->mReader->IsOpen()) this->mReader->Close();
+}
+
 E57Reader::~E57Reader()
 {
     for (auto& [key, ptr] : this->mScanDataPoints)
-        delete ptr;
+        if (ptr != nullptr) delete ptr;
 
     if (this->mReader->IsOpen()) this->mReader->Close();
     delete this->mReader;

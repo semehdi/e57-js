@@ -8,7 +8,9 @@ import * as testsUtils from './utils.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const OUTPUT_DIR = path.join(__dirname, 'output')
-const IMAGE_PATH = path.join(__dirname, 'data/images/image_1.jpg')
+const IMAGE_PATH   = path.join(__dirname, 'data/images/image_1.jpg')
+const IMAGE_WIDTH  = 1960
+const IMAGE_HEIGHT = 980
 
 describe('SimpleWriter async', () => {
     before(async () => {
@@ -69,6 +71,113 @@ describe('SimpleWriter async', () => {
         assert.equal(Number(idx), 0)
         writer.Close()
         assert.ok(fs.existsSync(filePath))
+    })
+
+    it('AddImage header fields round-trip', async () => {
+        const filePath = path.join(OUTPUT_DIR, 'ImageHeader.e57')
+        const writer = new E57Writer(filePath)
+        const image = new E57WriterImage(
+            IMAGE_PATH,
+            E57.LibE57.Image2DType.ImageJPEG,
+            E57.LibE57.Image2DProjection.ProjectionVisual
+        )
+
+        image.setName('Front camera')
+        image.setGuid('Image-GUID-001')
+        image.setRotation(1.0, 0.0, 0.0, 0.0)
+        image.setTrasnlation(1.0, 2.0, 3.0)
+
+        const h = image.getHeader()
+        h.description                          = 'Test image description'
+        h.sensorVendor                         = 'e57-js'
+        h.sensorModel                          = 'CamX-9000'
+        h.sensorSerialNumber                   = 'SN-123456'
+        h.associatedData3DGuid                 = 'Scan-GUID-001'
+        h.setAcquisitionDateTime(1748822400.0, 0)
+
+        const bytes = await testsUtils.withKeepAlive(writer.AddImage(image))
+        writer.Close()
+
+        const reader = testsUtils.openReader(filePath)
+        assert.equal(Number(reader.GetImage2DCount()), 1)
+
+        const rh = reader.GetImage(0).GetHeader()
+
+        // string fields
+        assert.equal(rh.name,                 'Front camera')
+        assert.equal(rh.guid,                 'Image-GUID-001')
+        assert.equal(rh.description,          'Test image description')
+        assert.equal(rh.sensorVendor,         'e57-js')
+        assert.equal(rh.sensorModel,          'CamX-9000')
+        assert.equal(rh.sensorSerialNumber,   'SN-123456')
+        assert.equal(rh.associatedData3DGuid, 'Scan-GUID-001')
+
+        // acquisition date-time
+        assert.equal(Number(rh.acquisitionDateTime.dateTimeValue), 1748822400.0)
+        assert.equal(Number(rh.acquisitionDateTime.isAtomicClockReferenced), 0)
+
+        // top-level numeric fields
+        assert.equal(Number(rh.width),           IMAGE_WIDTH)
+        assert.equal(Number(rh.height),          IMAGE_HEIGHT)
+        assert.equal(Number(rh.imageSize),       Number(bytes))
+        assert.equal(Number(rh.imageType),       Number(E57.LibE57.Image2DType.ImageJPEG))
+        assert.equal(Number(rh.imageVisualType), Number(E57.LibE57.Image2DType.ImageJPEG))
+        assert.equal(Number(rh.imageMaskType),   Number(E57.LibE57.Image2DType.ImageNone))
+        assert.equal(Number(rh.imageProjection), Number(E57.LibE57.Image2DProjection.ProjectionVisual))
+
+        // visual reference representation (populated for ProjectionVisual)
+        const vr = rh.visualReferenceRepresentation
+        assert.equal(Number(vr.imageWidth),    IMAGE_WIDTH)
+        assert.equal(Number(vr.imageHeight),   IMAGE_HEIGHT)
+        assert.equal(Number(vr.jpegImageSize), Number(bytes))
+        assert.equal(Number(vr.pngImageSize),  0)
+        assert.equal(Number(vr.imageMaskSize), 0)
+
+        // pinhole representation (not applicable for ProjectionVisual — all zero)
+        const pr = rh.pinholeRepresentation
+        assert.equal(Number(pr.imageWidth),      0)
+        assert.equal(Number(pr.imageHeight),     0)
+        assert.equal(Number(pr.jpegImageSize),   0)
+        assert.equal(Number(pr.pngImageSize),    0)
+        assert.equal(Number(pr.imageMaskSize),   0)
+        assert.equal(Number(pr.focalLength),     0)
+        assert.equal(Number(pr.pixelWidth),      0)
+        assert.equal(Number(pr.pixelHeight),     0)
+        assert.equal(Number(pr.principalPointX), 0)
+        assert.equal(Number(pr.principalPointY), 0)
+
+        // cylindrical representation (not applicable for ProjectionVisual — all zero)
+        const cr = rh.cylindricalRepresentation
+        assert.equal(Number(cr.imageWidth),      0)
+        assert.equal(Number(cr.imageHeight),     0)
+        assert.equal(Number(cr.jpegImageSize),   0)
+        assert.equal(Number(cr.pngImageSize),    0)
+        assert.equal(Number(cr.imageMaskSize),   0)
+        assert.equal(Number(cr.pixelWidth),      0)
+        assert.equal(Number(cr.pixelHeight),     0)
+        assert.equal(Number(cr.radius),          0)
+        assert.equal(Number(cr.principalPointY), 0)
+
+        // pinhole camera distortion extension (defaults — only populated for ProjectionPinhole)
+        const dc = rh.pinholeCameraDistortionExt
+        assert.equal(Number(dc.cameraNumber), 0)
+        assert.equal(Number(dc.CV_K1), 0); assert.equal(Number(dc.CV_K2), 0)
+        assert.equal(Number(dc.CV_K3), 0); assert.equal(Number(dc.CV_K4), 0)
+        assert.equal(Number(dc.CV_K5), 0); assert.equal(Number(dc.CV_K6), 0)
+        assert.equal(Number(dc.CV_P1), 0); assert.equal(Number(dc.CV_P2), 0)
+        assert.equal(Number(dc.CV_CX), 0); assert.equal(Number(dc.CV_CY), 0)
+        assert.equal(Number(dc.CV_FX), 0); assert.equal(Number(dc.CV_FY), 0)
+        assert.equal(Number(dc.CV_WIDTH),  0)
+        assert.equal(Number(dc.CV_HEIGHT), 0)
+
+        // pose
+        assert.equal(Number(rh.pose.rotation.w),    1.0)
+        assert.equal(Number(rh.pose.rotation.x),    0.0)
+        assert.equal(Number(rh.pose.rotation.y),    0.0)
+        assert.equal(Number(rh.pose.rotation.z),    0.0)
+        assert.equal(Number(rh.pose.translation.x), 1.0)
+        assert.equal(Number(rh.pose.translation.y), 2.0)
+        assert.equal(Number(rh.pose.translation.z), 3.0)
     })
 
     it('AddImage multiple images', async () => {
@@ -193,13 +302,21 @@ describe('SimpleWriter async', () => {
     })
 
     it('FromBuffer', async () => {
-        const filePath = path.join(OUTPUT_DIR, 'AsyncFromBuffer.e57')
         const numPoints = 64
-        const writer = new E57Writer(filePath)
-        await testsUtils.withKeepAlive(writer.AddScan(testsUtils.makeCartesianHeader('FromBuffer Async GUID'), testsUtils.makePoints(numPoints)))
-        writer.Close()
+        const writer    = E57Writer.ToBuffer()
 
-        const buffer = fs.readFileSync(filePath)
+        await testsUtils.withKeepAlive(writer.AddScan(testsUtils.makeCartesianHeader('FromBuffer Async GUID'), testsUtils.makePoints(numPoints)))
+
+        const imgBuf   = new Uint8Array(fs.readFileSync(IMAGE_PATH))
+        const image    = E57WriterImage.FromBuffer(imgBuf, E57.LibE57.Image2DType.ImageJPEG, E57.LibE57.Image2DProjection.ProjectionVisual)
+        image.setName('FromBuffer image')
+        const imageBytes = await testsUtils.withKeepAlive(writer.AddImage(image))
+        assert.ok(Number(imageBytes) > 0)
+
+        const buffer = writer.Close()
+        assert.ok(buffer instanceof Uint8Array)
+        assert.ok(buffer.byteLength > 0)
+
         const reader = E57Reader.FromBuffer(buffer)
 
         assert.equal(Number(reader.GetData3DCount()), 1)
@@ -213,5 +330,12 @@ describe('SimpleWriter async', () => {
             assert.equal(Number(pt.cartesianY), i)
             assert.equal(Number(pt.cartesianZ), i)
         }
+
+        assert.equal(Number(reader.GetImage2DCount()), 1)
+        assert.equal(reader.GetImage(0).GetHeader().name, 'FromBuffer image')
+
+        const imgData = await testsUtils.withKeepAlive(reader.GetImage(0).ReadImage())
+        assert.equal(imgData.byteLength, Number(imageBytes))
+        reader.Close();
     })
 })

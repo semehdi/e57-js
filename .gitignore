@@ -52,6 +52,10 @@ Makefile
 install_manifest.txt
 compile_commands.json
 
+# macOS
+.DS_Store
+**/.DS_Store
+
 # Temporary files
 *.tmp
 *.log
