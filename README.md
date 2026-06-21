@@ -189,8 +189,23 @@ header.pose.translation.z = 1.5    // 1.5 m above ground
 ```js
 import { E57WriterImage } from 'e57-js'
 
+// From a file path (Node.js)
 const image = new E57WriterImage(
     'photo.jpg',
+    E57.LibE57.Image2DType.ImageJPEG,
+    E57.LibE57.Image2DProjection.ProjectionVisual
+)
+image.setName('Front camera')
+
+await writer.AddImage(image)
+```
+
+In the browser, or when you already have the image bytes in memory, use `E57WriterImage.FromBuffer` instead:
+
+```js
+// From a Uint8Array (browser or Node.js)
+const image = E57WriterImage.FromBuffer(
+    buffer,                                          // Uint8Array
     E57.LibE57.Image2DType.ImageJPEG,
     E57.LibE57.Image2DProjection.ProjectionVisual
 )
