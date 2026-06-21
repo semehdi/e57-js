@@ -31,6 +31,7 @@ describe('SimpleWriter', () => {
         const reader = testsUtils.openReader(filePath)
         assert.equal(Number(reader.GetData3DCount()),0)
         assert.equal(Number(reader.GetImage2DCount()),0)
+        reader.Close()
     })
 
     it('ZeroPoints', () => {
@@ -50,6 +51,7 @@ describe('SimpleWriter', () => {
         const h = reader.GetScan(0).GetHeader()
         assert.equal(h.guid, 'Zero Points Header GUID')
         assert.equal(Number(h.pointCount), 0)
+        reader.Close()
     })
 
     it('CartesianPoints', () => {
@@ -85,6 +87,7 @@ describe('SimpleWriter', () => {
         assert.equal(Number(last.cartesianX), numPoints - 1)
         assert.equal(Number(last.cartesianY), numPoints - 1)
         assert.equal(Number(last.cartesianZ), numPoints - 1)
+        reader.Close()
     })
 
     it('ColouredCartesianPoints', () => {
@@ -111,6 +114,7 @@ describe('SimpleWriter', () => {
         assert.equal(Number(pt.colorRed),   0)
         assert.equal(Number(pt.colorGreen), 0)
         assert.equal(Number(pt.colorBlue),  255)
+        reader.Close()
     })
 
     it('ColouredCartesianPoints 16-bit', () => {
@@ -152,6 +156,7 @@ describe('SimpleWriter', () => {
         assert.equal(Number(last.colorRed),   Math.trunc((numPoints - 1) * 1024))
         assert.equal(Number(last.colorGreen), Math.trunc(MAX16 - (numPoints - 1) * 1024))
         assert.equal(Number(last.colorBlue),  Math.trunc(MAX16 / 2))
+        reader.Close()
     })
 
     it('ColouredCubeScaledInt', () => {
@@ -181,6 +186,7 @@ describe('SimpleWriter', () => {
         assert.equal(Number(h.pointCount), 1280 * 6)
         assert.equal(Number(h.pointFields.pointRangeNodeType), Number(E57.LibE57.NumericalNodeType.ScaledInteger))
         assert.equal(Number(h.pointFields.pointRangeScale), 0.001)
+        reader.Close()
     })
 
     it('GeorefScaledInt', () => {
@@ -254,6 +260,7 @@ describe('SimpleWriter', () => {
             assert.ok(Math.abs(Number(pt.cartesianY) - i * 0.10) < 1e-5)
             assert.ok(Math.abs(Number(pt.cartesianZ) - i * 0.05) < 1e-5)
         }
+        reader.Close()
     })
 
     it('GeorefSpherical', () => {
@@ -328,6 +335,7 @@ describe('SimpleWriter', () => {
             assert.ok(Math.abs(Number(pt.sphericalAzimuth)   - points[i].sphericalAzimuth)   < 1e-5)
             assert.ok(Math.abs(Number(pt.sphericalElevation) - points[i].sphericalElevation) < 1e-5)
         }
+        reader.Close()
     })
 
     it('CartesianPoseRotation', () => {
@@ -396,6 +404,7 @@ describe('SimpleWriter', () => {
             assert.ok(Math.abs(Number(pt.cartesianY))            < 1e-5)
             assert.ok(Math.abs(Number(pt.cartesianZ))            < 1e-5)
         }
+        reader.Close()
     })
 
     it('ScanPoints chunk-by-chunk', () => {
@@ -442,6 +451,7 @@ describe('SimpleWriter', () => {
         })
 
         assert.equal(totalRead, numPoints)
+        reader.Close()
     })
 
     it('MultipleScans', () => {
@@ -476,6 +486,7 @@ describe('SimpleWriter', () => {
         assert.equal(Number(reader.GetScan(0).GetHeader().pointCount), 8)
         assert.equal(reader.GetScan(1).GetHeader().guid, 'Multiple Scans Scan 2 Header GUID')
         assert.equal(Number(reader.GetScan(1).GetHeader().pointCount), 8)
+        reader.Close()
     })
 
     it('MultipleScans read points from all scans', () => {
@@ -536,6 +547,7 @@ describe('SimpleWriter', () => {
             total1 += chunk.size()
         })
         assert.equal(total1, numPoints)
+        reader.Close()
     })
 
     it('SphericalCubePoints', () => {
@@ -574,6 +586,7 @@ describe('SimpleWriter', () => {
         assert.ok(Math.abs(Number(first.sphericalRange)     - points[0].sphericalRange)     < 1e-5)
         assert.ok(Math.abs(Number(first.sphericalAzimuth)   - points[0].sphericalAzimuth)   < 1e-5)
         assert.ok(Math.abs(Number(first.sphericalElevation) - points[0].sphericalElevation) < 1e-5)
+        reader.Close()
     })
 
     it('ChineseFileName', () => {
@@ -582,6 +595,7 @@ describe('SimpleWriter', () => {
 
         const reader = testsUtils.openReader(filePath)
         assert.equal(Number(reader.GetData3DCount()),0)
+        reader.Close()
     })
 
     it('UmlautFileName', () => {
@@ -590,6 +604,7 @@ describe('SimpleWriter', () => {
 
         const reader = testsUtils.openReader(filePath)
         assert.equal(Number(reader.GetData3DCount()),0)
+        reader.Close()
     })
 
     it('ToBuffer', () => {
@@ -615,6 +630,7 @@ describe('SimpleWriter', () => {
             assert.equal(Number(pt.cartesianY), i)
             assert.equal(Number(pt.cartesianZ), i)
         }
+        reader.Close()
     })
 
     it('FromBuffer', () => {
@@ -640,5 +656,6 @@ describe('SimpleWriter', () => {
             assert.equal(Number(pt.cartesianY), i)
             assert.equal(Number(pt.cartesianZ), i)
         }
+        reader.Close()
     })
 })

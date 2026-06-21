@@ -178,6 +178,7 @@ describe('SimpleWriter async', () => {
         assert.equal(Number(rh.pose.translation.x), 1.0)
         assert.equal(Number(rh.pose.translation.y), 2.0)
         assert.equal(Number(rh.pose.translation.z), 3.0)
+        reader.Close()
     })
 
     it('AddImage multiple images', async () => {
@@ -204,6 +205,7 @@ describe('SimpleWriter async', () => {
         assert.equal(reader.GetImage(0).GetHeader().name, 'Camera 1')
         assert.equal(reader.GetImage(1).GetHeader().name, 'Camera 2')
         assert.equal(reader.GetImage(2).GetHeader().name, 'Camera 3')
+        reader.Close()
     })
 
     it('AddImage bytes match source file size', async () => {
@@ -242,6 +244,7 @@ describe('SimpleWriter async', () => {
         assert.equal(Number(h.pose.rotation.x), 0.0)
         assert.equal(Number(h.pose.rotation.y), 0.0)
         assert.equal(Number(h.pose.rotation.z), 0.0)
+        reader.Close()
     })
 
     it('AddScan and AddImage combined', async () => {
@@ -277,6 +280,7 @@ describe('SimpleWriter async', () => {
         assert.equal(Number(reader.GetImage(0).GetHeader().imageSize), Number(bytes))
         const imgData = await testsUtils.withKeepAlive(reader.GetImage(0).ReadImage())
         assert.equal(imgData.byteLength, Number(bytes))
+        reader.Close()
     })
 
     it('ReadScan from file', async () => {
@@ -299,6 +303,7 @@ describe('SimpleWriter async', () => {
             assert.equal(Number(pt.cartesianY), i)
             assert.equal(Number(pt.cartesianZ), i)
         }
+        reader.Close()
     })
 
     it('FromBuffer', async () => {

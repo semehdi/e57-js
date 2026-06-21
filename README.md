@@ -111,6 +111,8 @@ const points = scan.ReadScanSync()
 const bytes  = image.ReadImageSync()
 ```
 
+> **Exception:** `AddImage` has no sync version.
+
 ---
 
 ## Writing a file
@@ -200,7 +202,7 @@ image.setName('Front camera')
 await writer.AddImage(image)
 ```
 
-In the browser, or when you already have the image bytes in memory, use `E57WriterImage.FromBuffer` instead:
+In the browser, use `E57WriterImage.FromBuffer` instead:
 
 ```js
 // From a Uint8Array (browser or Node.js)
