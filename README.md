@@ -37,7 +37,11 @@ await E57.Init()
 ### Open the file
 
 ```js
+// From a file path (Node.js)
 const reader = new E57Reader('scan.e57')
+
+// From a buffer (browser or Node.js)
+const reader = E57Reader.FromBuffer(buffer)  // buffer is a Uint8Array
 
 console.log(reader.GetData3DCount())   // number of 3D scans
 console.log(reader.GetImage2DCount())  // number of embedded images
@@ -114,7 +118,11 @@ const bytes  = image.ReadImageSync()
 ### Create the file
 
 ```js
+// To a file path (Node.js)
 const writer = new E57Writer('output.e57')
+
+// To a buffer (browser or Node.js) — Close() returns a Uint8Array
+const writer = E57Writer.ToBuffer()
 ```
 
 ### Write a 3D scan
@@ -196,7 +204,7 @@ await writer.AddImage(image)
 Always call `Close()` when you are done. This finalises the file — skipping it will produce a corrupt file.
 
 ```js
-writer.Close()
+writer.Close()  // returns a Uint8Array only when the writer was created with E57Writer.ToBuffer()
 ```
 
 ---
