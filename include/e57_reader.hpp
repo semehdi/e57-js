@@ -6,10 +6,10 @@
 #include <thread>
 #include <cstdlib>
 #include <pthread.h>
-#include <emscripten.h>
-#include <emscripten/val.h>
-#include <emscripten/threading.h>
 
+#include "emscripten.h"
+#include "emscripten/val.h"
+#include "emscripten/threading.h"
 #include "E57SimpleReader.h"
 #include "E57SimpleData.h"
 #include "point.hpp"

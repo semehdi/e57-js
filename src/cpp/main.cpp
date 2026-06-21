@@ -1,7 +1,7 @@
-#include <emscripten.h>
-#include <emscripten/bind.h>
 #include <unordered_map>
 
+#include "emscripten.h"
+#include "emscripten/bind.h"
 #include "E57Exception.h"
 #include "E57Format.h"
 #include "E57SimpleData.h"

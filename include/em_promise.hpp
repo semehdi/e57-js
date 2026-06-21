@@ -4,8 +4,8 @@
 #include <vector>
 #include <cstdint>
 
-#include <emscripten.h>
-#include <emscripten/val.h>
+#include "emscripten.h"
+#include "emscripten/val.h"
 
 
 class EmPromise

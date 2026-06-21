@@ -770,4 +770,29 @@ describe('SimpleWriter', () => {
         const reader = testsUtils.openReader(filePath)
         assert.equal(Number(reader.GetData3DCount()),0)
     })
+
+    it('FromBuffer', () => {
+        const filePath = path.join(OUTPUT_DIR, 'FromBuffer.e57')
+        const numPoints = 64
+        const writer = new E57Writer(filePath)
+        const header = testsUtils.makeCartesianHeader('FromBuffer Header GUID')
+
+        writer.AddScanSync(header, testsUtils.makePoints(numPoints))
+        writer.Close()
+
+        const buffer = fs.readFileSync(filePath)
+        const reader = E57Reader.FromBuffer(buffer)
+
+        assert.equal(Number(reader.GetData3DCount()), 1)
+        assert.equal(reader.GetScan(0).GetHeader().guid, 'FromBuffer Header GUID')
+        assert.equal(Number(reader.GetScan(0).GetHeader().pointCount), numPoints)
+
+        const pts = reader.GetScan(0).ReadScanSync()
+        for (let i = 0; i < numPoints; i++) {
+            const pt = pts.get(i)
+            assert.equal(Number(pt.cartesianX), i)
+            assert.equal(Number(pt.cartesianY), i)
+            assert.equal(Number(pt.cartesianZ), i)
+        }
+    })
 })

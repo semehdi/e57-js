@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { E57, E57Writer, E57WriterImage } from '../dist/index.mjs'
+import { E57, E57Reader, E57Writer, E57WriterImage } from '../dist/index.mjs'
 import * as testsUtils from './utils.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -23,7 +23,7 @@ describe('SimpleWriter async', () => {
     it('AddScan resolves with scan index', async () => {
         const filePath = path.join(OUTPUT_DIR, 'AsyncScan.e57')
         const writer = new E57Writer(filePath)
-        const idx = await testsUtils.withKeepAlive(writer.AddScan(testsUtils.makeCartesianHeader('Async Scan GUID'), testsUtils.makePoints(64)))
+        const idx = await testsUtils.withKeepAlive(writer.AddScan(testsUtils.makeCartesianHeader('Async Scan GUID'), testsUtils.makePoints(50000)))
         assert.equal(Number(idx), 0)
         writer.Close()
         assert.ok(fs.existsSync(filePath))
@@ -168,5 +168,50 @@ describe('SimpleWriter async', () => {
         assert.equal(Number(reader.GetImage(0).GetHeader().imageSize), Number(bytes))
         const imgData = await testsUtils.withKeepAlive(reader.GetImage(0).ReadImage())
         assert.equal(imgData.byteLength, Number(bytes))
+    })
+
+    it('ReadScan from file', async () => {
+        const filePath = path.join(OUTPUT_DIR, 'AsyncReadScanFromFile.e57')
+        const numPoints = 64
+        const writer = new E57Writer(filePath)
+        await testsUtils.withKeepAlive(writer.AddScan(testsUtils.makeCartesianHeader('ReadScan File GUID'), testsUtils.makePoints(numPoints)))
+        writer.Close()
+
+        const reader = new E57Reader(filePath)
+
+        assert.equal(Number(reader.GetData3DCount()), 1)
+        assert.equal(reader.GetScan(0).GetHeader().guid, 'ReadScan File GUID')
+        assert.equal(Number(reader.GetScan(0).GetHeader().pointCount), numPoints)
+
+        const pts = await testsUtils.withKeepAlive(reader.GetScan(0).ReadScan())
+        for (let i = 0; i < numPoints; i++) {
+            const pt = pts.get(i)
+            assert.equal(Number(pt.cartesianX), i)
+            assert.equal(Number(pt.cartesianY), i)
+            assert.equal(Number(pt.cartesianZ), i)
+        }
+    })
+
+    it('FromBuffer', async () => {
+        const filePath = path.join(OUTPUT_DIR, 'AsyncFromBuffer.e57')
+        const numPoints = 64
+        const writer = new E57Writer(filePath)
+        await testsUtils.withKeepAlive(writer.AddScan(testsUtils.makeCartesianHeader('FromBuffer Async GUID'), testsUtils.makePoints(numPoints)))
+        writer.Close()
+
+        const buffer = fs.readFileSync(filePath)
+        const reader = E57Reader.FromBuffer(buffer)
+
+        assert.equal(Number(reader.GetData3DCount()), 1)
+        assert.equal(reader.GetScan(0).GetHeader().guid, 'FromBuffer Async GUID')
+        assert.equal(Number(reader.GetScan(0).GetHeader().pointCount), numPoints)
+
+        const pts = await testsUtils.withKeepAlive(reader.GetScan(0).ReadScan())
+        for (let i = 0; i < numPoints; i++) {
+            const pt = pts.get(i)
+            assert.equal(Number(pt.cartesianX), i)
+            assert.equal(Number(pt.cartesianY), i)
+            assert.equal(Number(pt.cartesianZ), i)
+        }
     })
 })

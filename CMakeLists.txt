@@ -22,7 +22,7 @@ set(EM_LINK_OPTIONS
     "-sMODULARIZE"
     "-sEXPORT_ES6=1"
     "-sEXPORT_NAME=e57"
-    "-sENVIRONMENT=node,worker"
+    "-sENVIRONMENT=node,worker,web"
     "-sEXPORTED_FUNCTIONS=['_malloc','_free']"
     "-sEXPORTED_RUNTIME_METHODS=['FS','HEAPU8']"
     "-lnodefs.js"

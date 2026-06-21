@@ -258,11 +258,34 @@ export class E57Writer
      *
      * @param {string} filePath - Absolute or relative path for the output `.e57` file.
      */
-    constructor(filePath)
+    constructor(filePath, toBuffer = false)
     {
-        const absInputPath = path.resolve(filePath);
-        const inputFilePath = path.join(E57.RootDir, absInputPath);
+        const guid = crypto.randomUUID();
+        this._bufferFileMemFSFilePath = "/" + guid + ".e57";
+        const inputFilePath = toBuffer ? this._bufferFileMemFSFilePath : path.join(E57.RootDir, path.resolve(filePath));
         this.writer = new E57.LibE57.E57Writer(inputFilePath);
+        this._toBuffer = toBuffer;
+    }
+
+    /**
+     * Creates an `E57Writer` that writes entirely to the Emscripten in-memory
+     * filesystem instead of a file on disk. Call `Close()` when done — it will
+     * return the completed file as a `Uint8Array`.
+     *
+     * Useful in browser environments or any context where writing to disk is not
+     * possible or desirable.
+     *
+     * @returns {E57Writer}
+     *
+     * @example
+     * await E57.Init()
+     * const writer = E57Writer.ToBuffer()
+     * writer.AddScanSync(header, points)
+     * const bytes = writer.Close() // Uint8Array containing the full E57 file
+     */
+    static ToBuffer()
+    {
+        return new E57Writer("", true);
     }
 
     /**
@@ -331,11 +354,33 @@ export class E57Writer
     }
 
     /**
-     * Flushes and closes the file. Must be called after all scans and images
-     * have been added.
+     * Flushes all pending data, finalises the E57 structure, and closes the
+     * underlying writer. Must be called after all scans and images have been added.
+     *
+     * When the writer was created with `E57Writer.ToBuffer()`, `Close()` reads the
+     * completed file from the Emscripten in-memory filesystem and returns it as a
+     * `Uint8Array` — no file is written to disk. In all other cases the return
+     * value is `undefined`.
+     *
+     * @returns {Uint8Array|undefined} The raw E57 bytes when using `ToBuffer()`,
+     *   otherwise `undefined`.
+     *
+     * @example
+     * // file on disk
+     * const writer = new E57Writer('output.e57')
+     * writer.AddScanSync(header, points)
+     * writer.Close()
+     *
+     * @example
+     * // in-memory buffer
+     * const writer = E57Writer.ToBuffer()
+     * writer.AddScanSync(header, points)
+     * const bytes = writer.Close() // Uint8Array
      */
     Close()
     {
         this.writer.Close();
+        if (this._toBuffer)
+            return E57.LibE57.FS.readFile(this._bufferFileMemFSFilePath);
     }
 }

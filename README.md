@@ -1,6 +1,6 @@
 # e57-js
 
-Node.js library for reading and writing **E57 point cloud files**.
+JavaScript library for reading and writing **E57 point cloud files**, compatible with **Node.js** and the **browser**.
 
 > **What is a point cloud?** A point cloud is a collection of 3D points in space, typically captured by a laser scanner (LiDAR). Each point has X, Y, Z coordinates and optionally colour, intensity, and other data. E57 is the standard file format for storing them.
 

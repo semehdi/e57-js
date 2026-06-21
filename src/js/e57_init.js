@@ -46,13 +46,17 @@ export class E57 {
     static Init()
     {
         const isBrowser = typeof window !== 'undefined';
-        
+
         if (E57.LibE57 !== null)
             return Promise.resolve();
 
         return e57().then(function(e57Module) {
-            e57Module.FS.mkdir(E57.RootDir);
-            e57Module.FS.mount(e57Module.FS.filesystems.NODEFS, {root : '/'}, E57.RootDir);
+            if (!isBrowser)
+            {
+                e57Module.FS.mkdir(E57.RootDir);
+                e57Module.FS.mount(e57Module.FS.filesystems.NODEFS, {root : '/'}, E57.RootDir);
+            }
+            
             E57.LibE57 = e57Module;
         });
     }
