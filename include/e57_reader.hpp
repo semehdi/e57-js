@@ -6,10 +6,10 @@
 #include <thread>
 #include <cstdlib>
 #include <pthread.h>
-#include <emscripten.h>
-#include <emscripten/val.h>
-#include <emscripten/threading.h>
 
+#include "emscripten.h"
+#include "emscripten/val.h"
+#include "emscripten/threading.h"
 #include "E57SimpleReader.h"
 #include "E57SimpleData.h"
 #include "point.hpp"
@@ -166,6 +166,14 @@ public:
      * @param scanIdx Zero-based scan index.
      */
     void ResetScanReader(int64_t scanIdx);
+
+    /**
+     * @brief Closes the underlying E57 file and releases all scan resources.
+     *
+     * Safe to call before the object is destroyed. The destructor will not
+     * double-close or double-free after this call.
+     */
+    void Close();
 
     ~E57Reader();
 

@@ -1,7 +1,7 @@
-#include <emscripten.h>
-#include <emscripten/bind.h>
 #include <unordered_map>
 
+#include "emscripten.h"
+#include "emscripten/bind.h"
 #include "E57Exception.h"
 #include "E57Format.h"
 #include "E57SimpleData.h"
@@ -677,7 +677,8 @@ EMSCRIPTEN_BINDINGS(e57) {
         .function("ReadScanSync", &E57Reader::ReadScanSync)
         .function("ReadImage", &E57Reader::ReadImage)
         .function("ReadImageSync", &E57Reader::ReadImageSync)
-        .function("ScanCoordinatesSystem", &E57Reader::ScanCoordinatesSystem);
+        .function("ScanCoordinatesSystem", &E57Reader::ScanCoordinatesSystem)
+        .function("Close", &E57Reader::Close);
 
     class_<E57Writer>("E57Writer")
         .constructor<const std::string&>()

@@ -35,6 +35,24 @@ export class E57WriterImage
     }
 
     /**
+     * Creates an `E57WriterImage` from a `Uint8Array` instead of a file path.
+     * Use this in the browser or any context where the file system is unavailable.
+     *
+     * @param {Uint8Array} buffer          - Raw image bytes.
+     * @param {number}     imageType       - `Image2DType` enum value.
+     * @param {number}     imageProjection - `Image2DProjection` enum value.
+     * @returns {E57WriterImage}
+     */
+    static FromBuffer(buffer, imageType, imageProjection)
+    {
+        const img = new E57WriterImage(null, imageType, imageProjection);
+        img._buffer = buffer;
+        img._width = null;
+        img._height = null;
+        return img;
+    }
+
+    /**
      * Returns the source image path.
      *
      * @returns {string}
@@ -89,13 +107,49 @@ export class E57WriterImage
     }
 
     /**
-     * Returns the raw sharp metadata for the source image.
+     * Resolves image dimensions, using the environment-appropriate API.
+     * In the browser, uses `createImageBitmap`; in Node.js, uses `sharp`.
+     * The result is cached after the first call.
      *
-     * @returns {Promise<import('sharp').Metadata>}
+     * @returns {Promise<{width: number, height: number}>}
+     */
+    _resolveMetadata()
+    {
+        if (this._width != null && this._height != null)
+            return Promise.resolve({ width: this._width, height: this._height });
+
+        if (this._metadataPromise) return this._metadataPromise;
+
+        if (typeof window !== 'undefined') {
+            this._metadataPromise = this.getBuffer().then(buf => {
+                const blob = new Blob([buf])
+                return createImageBitmap(blob).then(bitmap => {
+                    const meta = { width: bitmap.width, height: bitmap.height }
+                    bitmap.close()
+                    this._width  = meta.width
+                    this._height = meta.height
+                    return meta
+                })
+            })
+        } else {
+            this._metadataPromise = this.getBuffer().then(buf => sharp(buf).metadata()).then(meta => {
+                this._width  = meta.width
+                this._height = meta.height
+                return meta
+            })
+        }
+
+        return this._metadataPromise;
+    }
+
+    /**
+     * Returns image metadata. Uses `sharp` in Node.js and `createImageBitmap` in the browser.
+     *
+     * @returns {Promise<{width: number, height: number}>}
      */
     getMetadata()
     {
-        return sharp(this._imgPath).metadata();
+        return this._resolveMetadata();
     }
 
     /**
@@ -103,28 +157,25 @@ export class E57WriterImage
      *
      * @returns {Promise<[number, number]>}
      */
-    async getDimensions()
+    getDimensions()
     {
-        const meta = await sharp(this._imgPath).metadata();
-        return [meta.width, meta.height];
+        return this._resolveMetadata().then(meta => [meta.width, meta.height]);
     }
 
     /**
      * @returns {Promise<number>} Width in pixels.
      */
-    async getWidth()
+    getWidth()
     {
-        const meta = await sharp(this._imgPath).metadata();
-        return meta.width;
+        return this._resolveMetadata().then(meta => meta.width);
     }
 
     /**
      * @returns {Promise<number>} Height in pixels.
      */
-    async getHeight()
+    getHeight()
     {
-        const meta = await sharp(this._imgPath).metadata();
-        return meta.height;
+        return this._resolveMetadata().then(meta => meta.height);
     }
 
     /**
@@ -200,12 +251,18 @@ export class E57WriterImage
     /**
      * Reads the source image from disk and returns its bytes as a `Uint8Array`.
      *
-     * @returns {Promise<Uint8Array>}
+     * @returns {Uint8Array}
      */
-    async getBuffer()
+    getBufferSync()
     {
-        const buffer = await fs.promises.readFile(this.getPath());
-        return new Uint8Array(buffer);
+        if (this._buffer) return this._buffer;
+        return new Uint8Array(fs.readFileSync(this.getPath()));
+    }
+
+    getBuffer()
+    {
+        if (this._buffer) return Promise.resolve(this._buffer);
+        return fs.promises.readFile(this.getPath()).then(buf => new Uint8Array(buf));
     }
 
     /**
@@ -258,31 +315,34 @@ export class E57Writer
      *
      * @param {string} filePath - Absolute or relative path for the output `.e57` file.
      */
-    constructor(filePath)
+    constructor(filePath, toBuffer = false)
     {
-        const absInputPath = path.resolve(filePath);
-        const inputFilePath = path.join(E57.RootDir, absInputPath);
+        const guid = crypto.randomUUID();
+        this._bufferFileMemFSFilePath = "/" + guid + ".e57";
+        const inputFilePath = toBuffer ? this._bufferFileMemFSFilePath : path.join(E57.RootDir, path.resolve(filePath));
         this.writer = new E57.LibE57.E57Writer(inputFilePath);
+        this._toBuffer = toBuffer;
     }
 
     /**
-     * Reads the image buffer from disk and writes it to the E57 file synchronously.
-     * Blocks until the write is complete. Width and height must be provided since
-     * there is no synchronous image metadata API available in JS.
+     * Creates an `E57Writer` that writes entirely to the Emscripten in-memory
+     * filesystem instead of a file on disk. Call `Close()` when done — it will
+     * return the completed file as a `Uint8Array`.
      *
-     * @param {E57WriterImage} image  - The image to write.
-     * @param {number}         width  - Image width in pixels.
-     * @param {number}         height - Image height in pixels.
-     * @returns {number} Number of bytes written.
+     * Useful in browser environments or any context where writing to disk is not
+     * possible or desirable.
+     *
+     * @returns {E57Writer}
+     *
+     * @example
+     * await E57.Init()
+     * const writer = E57Writer.ToBuffer()
+     * writer.AddScanSync(header, points)
+     * const bytes = writer.Close() // Uint8Array containing the full E57 file
      */
-    AddImageSync(image, width, height)
+    static ToBuffer()
     {
-        const buffer     = fs.readFileSync(image.getPath());
-        const bufferData = new Uint8Array(buffer);
-        return Number(this.writer.AddImageSync(
-            image.getHeader(), image.getType(), image.getProjection(),
-            0, bufferData, bufferData.length, width, height
-        ));
+        return new E57Writer("", true);
     }
 
     /**
@@ -292,17 +352,13 @@ export class E57Writer
      * @param {E57WriterImage} image - The image to write.
      * @returns {Promise<number>} Resolves with the number of bytes written.
      */
-    async AddImage(image)
+    AddImage(image)
     {
-        const [buffer, meta] = await Promise.all([
-            image.getBuffer(),
-            sharp(image.getPath()).metadata()
-        ]);
-        const bufferData = new Uint8Array(buffer);
-        return this.writer.AddImage(
-            image.getHeader(), image.getType(), image.getProjection(),
-            0, bufferData, bufferData.length, meta.width, meta.height
-        ).then(Number);
+        return Promise.all([image.getBuffer(), image.getMetadata()])
+            .then(([bufferData, meta]) => this.writer.AddImage(
+                image.getHeader(), image.getType(), image.getProjection(),
+                0, bufferData, bufferData.length, meta.width, meta.height
+            ).then(Number));
     }
 
     /**
@@ -331,11 +387,33 @@ export class E57Writer
     }
 
     /**
-     * Flushes and closes the file. Must be called after all scans and images
-     * have been added.
+     * Flushes all pending data, finalises the E57 structure, and closes the
+     * underlying writer. Must be called after all scans and images have been added.
+     *
+     * When the writer was created with `E57Writer.ToBuffer()`, `Close()` reads the
+     * completed file from the Emscripten in-memory filesystem and returns it as a
+     * `Uint8Array` — no file is written to disk. In all other cases the return
+     * value is `undefined`.
+     *
+     * @returns {Uint8Array|undefined} The raw E57 bytes when using `ToBuffer()`,
+     *   otherwise `undefined`.
+     *
+     * @example
+     * // file on disk
+     * const writer = new E57Writer('output.e57')
+     * writer.AddScanSync(header, points)
+     * writer.Close()
+     *
+     * @example
+     * // in-memory buffer
+     * const writer = E57Writer.ToBuffer()
+     * writer.AddScanSync(header, points)
+     * const bytes = writer.Close() // Uint8Array
      */
     Close()
     {
         this.writer.Close();
+        if (this._toBuffer)
+            return E57.LibE57.FS.readFile(this._bufferFileMemFSFilePath);
     }
 }

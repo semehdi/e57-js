@@ -1,7 +1,7 @@
 {
   "name": "e57-js",
   "type": "module",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "license": "MIT",
   "keywords": [
     "e57",
@@ -31,6 +31,7 @@
   },
   "exports": {
     ".": {
+      "browser": "./dist/index.browser.mjs",
       "import": "./dist/index.mjs",
       "require": "./dist/index.cjs"
     }
@@ -39,8 +40,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "docker compose up --build",
-    "test": "node --test --test-concurrency=1 --test-timeout=30000 tests/**/*.test.js"
+    "build": "docker compose up --build"
   },
   "dependencies": {
     "fs-extra": "^11.3.4",

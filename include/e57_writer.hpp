@@ -2,10 +2,10 @@
 
 #include <string>
 #include <thread>
-#include <emscripten/bind.h>
-#include <emscripten/val.h>
-#include <emscripten/threading.h>
 
+#include "emscripten/bind.h"
+#include "emscripten/val.h"
+#include "emscripten/threading.h"
 #include "image_header.hpp"
 #include "E57SimpleWriter.h"
 #include "E57SimpleData.h"

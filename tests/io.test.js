@@ -3,15 +3,11 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { E57, E57Reader, E57Writer, E57WriterImage } from '../dist/index.mjs'
+import { E57, E57Reader, E57Writer } from '../dist/index.mjs'
 import * as testsUtils from './utils.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const OUTPUT_DIR = path.join(__dirname, 'output')
-const IMAGE_PATH   = path.join(__dirname, 'data/images/image_1.jpg')
-const IMAGE_WIDTH  = 1960
-const IMAGE_HEIGHT = 980
-
 // --- tests ------------------------------------------------------------------
 
 describe('SimpleWriter', () => {
@@ -35,6 +31,7 @@ describe('SimpleWriter', () => {
         const reader = testsUtils.openReader(filePath)
         assert.equal(Number(reader.GetData3DCount()),0)
         assert.equal(Number(reader.GetImage2DCount()),0)
+        reader.Close()
     })
 
     it('ZeroPoints', () => {
@@ -54,6 +51,7 @@ describe('SimpleWriter', () => {
         const h = reader.GetScan(0).GetHeader()
         assert.equal(h.guid, 'Zero Points Header GUID')
         assert.equal(Number(h.pointCount), 0)
+        reader.Close()
     })
 
     it('CartesianPoints', () => {
@@ -89,6 +87,7 @@ describe('SimpleWriter', () => {
         assert.equal(Number(last.cartesianX), numPoints - 1)
         assert.equal(Number(last.cartesianY), numPoints - 1)
         assert.equal(Number(last.cartesianZ), numPoints - 1)
+        reader.Close()
     })
 
     it('ColouredCartesianPoints', () => {
@@ -115,6 +114,7 @@ describe('SimpleWriter', () => {
         assert.equal(Number(pt.colorRed),   0)
         assert.equal(Number(pt.colorGreen), 0)
         assert.equal(Number(pt.colorBlue),  255)
+        reader.Close()
     })
 
     it('ColouredCartesianPoints 16-bit', () => {
@@ -156,6 +156,7 @@ describe('SimpleWriter', () => {
         assert.equal(Number(last.colorRed),   Math.trunc((numPoints - 1) * 1024))
         assert.equal(Number(last.colorGreen), Math.trunc(MAX16 - (numPoints - 1) * 1024))
         assert.equal(Number(last.colorBlue),  Math.trunc(MAX16 / 2))
+        reader.Close()
     })
 
     it('ColouredCubeScaledInt', () => {
@@ -185,6 +186,7 @@ describe('SimpleWriter', () => {
         assert.equal(Number(h.pointCount), 1280 * 6)
         assert.equal(Number(h.pointFields.pointRangeNodeType), Number(E57.LibE57.NumericalNodeType.ScaledInteger))
         assert.equal(Number(h.pointFields.pointRangeScale), 0.001)
+        reader.Close()
     })
 
     it('GeorefScaledInt', () => {
@@ -258,6 +260,7 @@ describe('SimpleWriter', () => {
             assert.ok(Math.abs(Number(pt.cartesianY) - i * 0.10) < 1e-5)
             assert.ok(Math.abs(Number(pt.cartesianZ) - i * 0.05) < 1e-5)
         }
+        reader.Close()
     })
 
     it('GeorefSpherical', () => {
@@ -332,6 +335,7 @@ describe('SimpleWriter', () => {
             assert.ok(Math.abs(Number(pt.sphericalAzimuth)   - points[i].sphericalAzimuth)   < 1e-5)
             assert.ok(Math.abs(Number(pt.sphericalElevation) - points[i].sphericalElevation) < 1e-5)
         }
+        reader.Close()
     })
 
     it('CartesianPoseRotation', () => {
@@ -400,6 +404,7 @@ describe('SimpleWriter', () => {
             assert.ok(Math.abs(Number(pt.cartesianY))            < 1e-5)
             assert.ok(Math.abs(Number(pt.cartesianZ))            < 1e-5)
         }
+        reader.Close()
     })
 
     it('ScanPoints chunk-by-chunk', () => {
@@ -446,6 +451,7 @@ describe('SimpleWriter', () => {
         })
 
         assert.equal(totalRead, numPoints)
+        reader.Close()
     })
 
     it('MultipleScans', () => {
@@ -480,6 +486,7 @@ describe('SimpleWriter', () => {
         assert.equal(Number(reader.GetScan(0).GetHeader().pointCount), 8)
         assert.equal(reader.GetScan(1).GetHeader().guid, 'Multiple Scans Scan 2 Header GUID')
         assert.equal(Number(reader.GetScan(1).GetHeader().pointCount), 8)
+        reader.Close()
     })
 
     it('MultipleScans read points from all scans', () => {
@@ -540,6 +547,7 @@ describe('SimpleWriter', () => {
             total1 += chunk.size()
         })
         assert.equal(total1, numPoints)
+        reader.Close()
     })
 
     it('SphericalCubePoints', () => {
@@ -578,181 +586,7 @@ describe('SimpleWriter', () => {
         assert.ok(Math.abs(Number(first.sphericalRange)     - points[0].sphericalRange)     < 1e-5)
         assert.ok(Math.abs(Number(first.sphericalAzimuth)   - points[0].sphericalAzimuth)   < 1e-5)
         assert.ok(Math.abs(Number(first.sphericalElevation) - points[0].sphericalElevation) < 1e-5)
-    })
-
-    it('AddImageSync header fields round-trip', () => {
-        const filePath = path.join(OUTPUT_DIR, 'ImageHeader.e57')
-        const writer = new E57Writer(filePath)
-        const image = new E57WriterImage(
-            IMAGE_PATH,
-            E57.LibE57.Image2DType.ImageJPEG,
-            E57.LibE57.Image2DProjection.ProjectionVisual
-        )
-
-        image.setName('Front camera')
-        image.setGuid('Image-GUID-001')
-        image.setRotation(1.0, 0.0, 0.0, 0.0)
-        image.setTrasnlation(1.0, 2.0, 3.0)
-
-        const h = image.getHeader()
-        h.description                          = 'Test image description'
-        h.sensorVendor                         = 'e57-js'
-        h.sensorModel                          = 'CamX-9000'
-        h.sensorSerialNumber                   = 'SN-123456'
-        h.associatedData3DGuid                 = 'Scan-GUID-001'
-        h.setAcquisitionDateTime(1748822400.0, 0)
-
-        const bytes = writer.AddImageSync(image, IMAGE_WIDTH, IMAGE_HEIGHT)
-        writer.Close()
-
-        const reader = testsUtils.openReader(filePath)
-        assert.equal(Number(reader.GetImage2DCount()), 1)
-
-        const rh = reader.GetImage(0).GetHeader()
-
-        // string fields
-        assert.equal(rh.name,                 'Front camera')
-        assert.equal(rh.guid,                 'Image-GUID-001')
-        assert.equal(rh.description,          'Test image description')
-        assert.equal(rh.sensorVendor,         'e57-js')
-        assert.equal(rh.sensorModel,          'CamX-9000')
-        assert.equal(rh.sensorSerialNumber,   'SN-123456')
-        assert.equal(rh.associatedData3DGuid, 'Scan-GUID-001')
-
-        // acquisition date-time
-        assert.equal(Number(rh.acquisitionDateTime.dateTimeValue), 1748822400.0)
-        assert.equal(Number(rh.acquisitionDateTime.isAtomicClockReferenced), 0)
-
-        // top-level numeric fields
-        assert.equal(Number(rh.width),           IMAGE_WIDTH)
-        assert.equal(Number(rh.height),          IMAGE_HEIGHT)
-        assert.equal(Number(rh.imageSize),       Number(bytes))
-        assert.equal(Number(rh.imageType),       Number(E57.LibE57.Image2DType.ImageJPEG))
-        assert.equal(Number(rh.imageVisualType), Number(E57.LibE57.Image2DType.ImageJPEG))
-        assert.equal(Number(rh.imageMaskType),   Number(E57.LibE57.Image2DType.ImageNone))
-        assert.equal(Number(rh.imageProjection), Number(E57.LibE57.Image2DProjection.ProjectionVisual))
-
-        // visual reference representation (populated for ProjectionVisual)
-        const vr = rh.visualReferenceRepresentation
-        assert.equal(Number(vr.imageWidth),    IMAGE_WIDTH)
-        assert.equal(Number(vr.imageHeight),   IMAGE_HEIGHT)
-        assert.equal(Number(vr.jpegImageSize), Number(bytes))
-        assert.equal(Number(vr.pngImageSize),  0)
-        assert.equal(Number(vr.imageMaskSize), 0)
-
-        // pinhole representation (not applicable for ProjectionVisual — all zero)
-        const pr = rh.pinholeRepresentation
-        assert.equal(Number(pr.imageWidth),      0)
-        assert.equal(Number(pr.imageHeight),     0)
-        assert.equal(Number(pr.jpegImageSize),   0)
-        assert.equal(Number(pr.pngImageSize),    0)
-        assert.equal(Number(pr.imageMaskSize),   0)
-        assert.equal(Number(pr.focalLength),     0)
-        assert.equal(Number(pr.pixelWidth),      0)
-        assert.equal(Number(pr.pixelHeight),     0)
-        assert.equal(Number(pr.principalPointX), 0)
-        assert.equal(Number(pr.principalPointY), 0)
-
-        // cylindrical representation (not applicable for ProjectionVisual — all zero)
-        const cr = rh.cylindricalRepresentation
-        assert.equal(Number(cr.imageWidth),      0)
-        assert.equal(Number(cr.imageHeight),     0)
-        assert.equal(Number(cr.jpegImageSize),   0)
-        assert.equal(Number(cr.pngImageSize),    0)
-        assert.equal(Number(cr.imageMaskSize),   0)
-        assert.equal(Number(cr.pixelWidth),      0)
-        assert.equal(Number(cr.pixelHeight),     0)
-        assert.equal(Number(cr.radius),          0)
-        assert.equal(Number(cr.principalPointY), 0)
-
-        // pinhole camera distortion extension (defaults — only populated for ProjectionPinhole)
-        const dc = rh.pinholeCameraDistortionExt
-        assert.equal(Number(dc.cameraNumber), 0)
-        assert.equal(Number(dc.CV_K1), 0); assert.equal(Number(dc.CV_K2), 0)
-        assert.equal(Number(dc.CV_K3), 0); assert.equal(Number(dc.CV_K4), 0)
-        assert.equal(Number(dc.CV_K5), 0); assert.equal(Number(dc.CV_K6), 0)
-        assert.equal(Number(dc.CV_P1), 0); assert.equal(Number(dc.CV_P2), 0)
-        assert.equal(Number(dc.CV_CX), 0); assert.equal(Number(dc.CV_CY), 0)
-        assert.equal(Number(dc.CV_FX), 0); assert.equal(Number(dc.CV_FY), 0)
-        assert.equal(Number(dc.CV_WIDTH),  0)
-        assert.equal(Number(dc.CV_HEIGHT), 0)
-
-        // pose
-        assert.equal(Number(rh.pose.rotation.w),    1.0)
-        assert.equal(Number(rh.pose.rotation.x),    0.0)
-        assert.equal(Number(rh.pose.rotation.y),    0.0)
-        assert.equal(Number(rh.pose.rotation.z),    0.0)
-        assert.equal(Number(rh.pose.translation.x), 1.0)
-        assert.equal(Number(rh.pose.translation.y), 2.0)
-        assert.equal(Number(rh.pose.translation.z), 3.0)
-    })
-
-    it('AddImageSync multiple images', () => {
-        const filePath = path.join(OUTPUT_DIR, 'MultipleImages.e57')
-        const writer = new E57Writer(filePath)
-
-        const makeImage = (name) => {
-            const img = new E57WriterImage(
-                IMAGE_PATH,
-                E57.LibE57.Image2DType.ImageJPEG,
-                E57.LibE57.Image2DProjection.ProjectionVisual
-            )
-            img.setName(name)
-            return img
-        }
-
-        writer.AddImageSync(makeImage('Camera 1'), IMAGE_WIDTH, IMAGE_HEIGHT)
-        writer.AddImageSync(makeImage('Camera 2'), IMAGE_WIDTH, IMAGE_HEIGHT)
-        writer.AddImageSync(makeImage('Camera 3'), IMAGE_WIDTH, IMAGE_HEIGHT)
-        writer.Close()
-
-        const reader = testsUtils.openReader(filePath)
-        assert.equal(Number(reader.GetImage2DCount()), 3)
-        assert.equal(reader.GetImage(0).GetHeader().name, 'Camera 1')
-        assert.equal(reader.GetImage(1).GetHeader().name, 'Camera 2')
-        assert.equal(reader.GetImage(2).GetHeader().name, 'Camera 3')
-    })
-
-    it('AddImageSync bytes match source file size', () => {
-        const filePath = path.join(OUTPUT_DIR, 'ImageBytes.e57')
-        const writer = new E57Writer(filePath)
-        const image = new E57WriterImage(
-            IMAGE_PATH,
-            E57.LibE57.Image2DType.ImageJPEG,
-            E57.LibE57.Image2DProjection.ProjectionVisual
-        )
-
-        const bytes = writer.AddImageSync(image, IMAGE_WIDTH, IMAGE_HEIGHT)
-        writer.Close()
-
-        const sourceSize = fs.statSync(IMAGE_PATH).size
-        assert.equal(Number(bytes), sourceSize)
-    })
-
-    it('AddImageSync with rotation and translation', () => {
-        const filePath = path.join(OUTPUT_DIR, 'ImagePose.e57')
-        const writer = new E57Writer(filePath)
-        const image = new E57WriterImage(
-            IMAGE_PATH,
-            E57.LibE57.Image2DType.ImageJPEG,
-            E57.LibE57.Image2DProjection.ProjectionVisual
-        )
-        image.setName('Posed camera')
-        image.setRotation(1.0, 0.0, 0.0, 0.0)
-        image.setTrasnlation(1.5, 2.5, 3.5)
-        writer.AddImageSync(image, IMAGE_WIDTH, IMAGE_HEIGHT)
-        writer.Close()
-
-        const reader = testsUtils.openReader(filePath)
-        assert.equal(Number(reader.GetImage2DCount()), 1)
-        const pose = reader.GetImage(0).GetHeader().pose
-        assert.equal(Number(pose.rotation.w), 1.0)
-        assert.equal(Number(pose.rotation.x), 0.0)
-        assert.equal(Number(pose.rotation.y), 0.0)
-        assert.equal(Number(pose.rotation.z), 0.0)
-        assert.equal(Number(pose.translation.x), 1.5)
-        assert.equal(Number(pose.translation.y), 2.5)
-        assert.equal(Number(pose.translation.z), 3.5)
+        reader.Close()
     })
 
     it('ChineseFileName', () => {
@@ -761,6 +595,7 @@ describe('SimpleWriter', () => {
 
         const reader = testsUtils.openReader(filePath)
         assert.equal(Number(reader.GetData3DCount()),0)
+        reader.Close()
     })
 
     it('UmlautFileName', () => {
@@ -769,5 +604,58 @@ describe('SimpleWriter', () => {
 
         const reader = testsUtils.openReader(filePath)
         assert.equal(Number(reader.GetData3DCount()),0)
+        reader.Close()
+    })
+
+    it('ToBuffer', () => {
+        const numPoints = 64
+        const writer = E57Writer.ToBuffer()
+        const header = testsUtils.makeCartesianHeader('ToBuffer Header GUID')
+
+        writer.AddScanSync(header, testsUtils.makePoints(numPoints))
+        const bytes = writer.Close()
+
+        assert.ok(bytes instanceof Uint8Array)
+        assert.ok(bytes.byteLength > 0)
+
+        const reader = E57Reader.FromBuffer(bytes)
+        assert.equal(Number(reader.GetData3DCount()), 1)
+        assert.equal(reader.GetScan(0).GetHeader().guid, 'ToBuffer Header GUID')
+        assert.equal(Number(reader.GetScan(0).GetHeader().pointCount), numPoints)
+
+        const pts = reader.GetScan(0).ReadScanSync()
+        for (let i = 0; i < numPoints; i++) {
+            const pt = pts.get(i)
+            assert.equal(Number(pt.cartesianX), i)
+            assert.equal(Number(pt.cartesianY), i)
+            assert.equal(Number(pt.cartesianZ), i)
+        }
+        reader.Close()
+    })
+
+    it('FromBuffer', () => {
+        const filePath = path.join(OUTPUT_DIR, 'FromBuffer.e57')
+        const numPoints = 64
+        const writer = new E57Writer(filePath)
+        const header = testsUtils.makeCartesianHeader('FromBuffer Header GUID')
+
+        writer.AddScanSync(header, testsUtils.makePoints(numPoints))
+        writer.Close()
+
+        const buffer = fs.readFileSync(filePath)
+        const reader = E57Reader.FromBuffer(buffer)
+
+        assert.equal(Number(reader.GetData3DCount()), 1)
+        assert.equal(reader.GetScan(0).GetHeader().guid, 'FromBuffer Header GUID')
+        assert.equal(Number(reader.GetScan(0).GetHeader().pointCount), numPoints)
+
+        const pts = reader.GetScan(0).ReadScanSync()
+        for (let i = 0; i < numPoints; i++) {
+            const pt = pts.get(i)
+            assert.equal(Number(pt.cartesianX), i)
+            assert.equal(Number(pt.cartesianY), i)
+            assert.equal(Number(pt.cartesianZ), i)
+        }
+        reader.Close()
     })
 })

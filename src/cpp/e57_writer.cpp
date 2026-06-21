@@ -9,7 +9,7 @@ static void buildWriteImageSig(WriteImageSig& sig, ImageHeader image2DHeader, Im
     Image2DProjection imageProjection, int64_t startPos, const emscripten::val& jsArray,
     int64_t byteCount, int32_t width, int32_t height)
 {
-    sig.data            = emscripten::vecFromJSArray<uint8_t>(jsArray);
+    sig.data            = emscripten::convertJSArrayToNumberVector<uint8_t>(jsArray);
     sig.imgHeader       = image2DHeader.ToImage2D();
     sig.imageType       = imageType;
     sig.imageProjection = imageProjection;
@@ -98,39 +98,39 @@ emscripten::val E57Writer::AddImage(
 
 static void fillPointsData(Data3DPointsDouble& pointsData, const emscripten::val& ptsArray, int64_t numPoints)
 {
-    for (int64_t i = 0; i < numPoints; ++i)
+    for (int64_t i = 0; i < numPoints; i++)
     {
         const Point pt = ptsArray[i].as<Point>();
 
-        pointsData.cartesianX[i]            = pt.cartesianX;
-        pointsData.cartesianY[i]            = pt.cartesianY;
-        pointsData.cartesianZ[i]            = pt.cartesianZ;
-        pointsData.cartesianInvalidState[i] = pt.cartesianInvalidState;
+        if (pointsData.cartesianX)            pointsData.cartesianX[i]            = pt.cartesianX;
+        if (pointsData.cartesianY)            pointsData.cartesianY[i]            = pt.cartesianY;
+        if (pointsData.cartesianZ)            pointsData.cartesianZ[i]            = pt.cartesianZ;
+        if (pointsData.cartesianInvalidState) pointsData.cartesianInvalidState[i] = pt.cartesianInvalidState;
 
-        pointsData.timeStamp[i]             = pt.timeStamp;
-        pointsData.isTimeStampInvalid[i]    = pt.isTimeStampInvalid;
+        if (pointsData.timeStamp)             pointsData.timeStamp[i]             = pt.timeStamp;
+        if (pointsData.isTimeStampInvalid)    pointsData.isTimeStampInvalid[i]    = pt.isTimeStampInvalid;
 
-        pointsData.colorRed[i]              = pt.colorRed;
-        pointsData.colorGreen[i]            = pt.colorGreen;
-        pointsData.colorBlue[i]             = pt.colorBlue;
-        pointsData.isColorInvalid[i]        = pt.isColorInvalid;
+        if (pointsData.colorRed)              pointsData.colorRed[i]              = pt.colorRed;
+        if (pointsData.colorGreen)            pointsData.colorGreen[i]            = pt.colorGreen;
+        if (pointsData.colorBlue)             pointsData.colorBlue[i]             = pt.colorBlue;
+        if (pointsData.isColorInvalid)        pointsData.isColorInvalid[i]        = pt.isColorInvalid;
 
-        pointsData.normalX[i]               = pt.normalX;
-        pointsData.normalY[i]               = pt.normalY;
-        pointsData.normalZ[i]               = pt.normalZ;
+        if (pointsData.normalX)               pointsData.normalX[i]               = pt.normalX;
+        if (pointsData.normalY)               pointsData.normalY[i]               = pt.normalY;
+        if (pointsData.normalZ)               pointsData.normalZ[i]               = pt.normalZ;
 
-        pointsData.sphericalAzimuth[i]      = pt.sphericalAzimuth;
-        pointsData.sphericalElevation[i]    = pt.sphericalElevation;
-        pointsData.sphericalRange[i]        = pt.sphericalRange;
+        if (pointsData.sphericalAzimuth)      pointsData.sphericalAzimuth[i]      = pt.sphericalAzimuth;
+        if (pointsData.sphericalElevation)    pointsData.sphericalElevation[i]    = pt.sphericalElevation;
+        if (pointsData.sphericalRange)        pointsData.sphericalRange[i]        = pt.sphericalRange;
 
-        pointsData.returnCount[i]           = pt.returnCount;
-        pointsData.returnIndex[i]           = pt.returnIndex;
+        if (pointsData.returnCount)           pointsData.returnCount[i]           = pt.returnCount;
+        if (pointsData.returnIndex)           pointsData.returnIndex[i]           = pt.returnIndex;
 
-        pointsData.columnIndex[i]           = pt.columnIndex;
-        pointsData.rowIndex[i]              = pt.rowIndex;
+        if (pointsData.columnIndex)           pointsData.columnIndex[i]           = pt.columnIndex;
+        if (pointsData.rowIndex)              pointsData.rowIndex[i]              = pt.rowIndex;
 
-        pointsData.intensity[i]             = pt.intensity;
-        pointsData.isIntensityInvalid[i]    = pt.isIntensityInvalid;
+        if (pointsData.intensity)             pointsData.intensity[i]             = pt.intensity;
+        if (pointsData.isIntensityInvalid)    pointsData.isIntensityInvalid[i]    = pt.isIntensityInvalid;
     }
 }
 

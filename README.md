@@ -1,6 +1,6 @@
 # e57-js
 
-Node.js library for reading and writing **E57 point cloud files**.
+JavaScript library for reading and writing **E57 point cloud files**, compatible with **Node.js** and the **browser**.
 
 > **What is a point cloud?** A point cloud is a collection of 3D points in space, typically captured by a laser scanner (LiDAR). Each point has X, Y, Z coordinates and optionally colour, intensity, and other data. E57 is the standard file format for storing them.
 
@@ -12,7 +12,9 @@ Node.js library for reading and writing **E57 point cloud files**.
 npm install e57-js
 ```
 
-Requires **Node.js 18 or higher**.
+Requires **Node.js 18 or higher**, or any modern browser with WebAssembly support.
+
+In the browser, file-system access is not available — use `E57Reader.FromBuffer(buffer)` to read from a `Uint8Array` and `E57Writer.ToBuffer()` to write to one.
 
 ---
 
@@ -35,7 +37,11 @@ await E57.Init()
 ### Open the file
 
 ```js
+// From a file path (Node.js)
 const reader = new E57Reader('scan.e57')
+
+// From a buffer (browser or Node.js)
+const reader = E57Reader.FromBuffer(buffer)  // buffer is a Uint8Array
 
 console.log(reader.GetData3DCount())   // number of 3D scans
 console.log(reader.GetImage2DCount())  // number of embedded images
@@ -105,6 +111,8 @@ const points = scan.ReadScanSync()
 const bytes  = image.ReadImageSync()
 ```
 
+> **Exception:** `AddImage` has no sync version.
+
 ---
 
 ## Writing a file
@@ -112,7 +120,11 @@ const bytes  = image.ReadImageSync()
 ### Create the file
 
 ```js
+// To a file path (Node.js)
 const writer = new E57Writer('output.e57')
+
+// To a buffer (browser or Node.js) — Close() returns a Uint8Array
+const writer = E57Writer.ToBuffer()
 ```
 
 ### Write a 3D scan
@@ -179,8 +191,23 @@ header.pose.translation.z = 1.5    // 1.5 m above ground
 ```js
 import { E57WriterImage } from 'e57-js'
 
+// From a file path (Node.js)
 const image = new E57WriterImage(
     'photo.jpg',
+    E57.LibE57.Image2DType.ImageJPEG,
+    E57.LibE57.Image2DProjection.ProjectionVisual
+)
+image.setName('Front camera')
+
+await writer.AddImage(image)
+```
+
+In the browser, use `E57WriterImage.FromBuffer` instead:
+
+```js
+// From a Uint8Array (browser or Node.js)
+const image = E57WriterImage.FromBuffer(
+    buffer,                                          // Uint8Array
     E57.LibE57.Image2DType.ImageJPEG,
     E57.LibE57.Image2DProjection.ProjectionVisual
 )
@@ -194,7 +221,7 @@ await writer.AddImage(image)
 Always call `Close()` when you are done. This finalises the file — skipping it will produce a corrupt file.
 
 ```js
-writer.Close()
+writer.Close()  // returns a Uint8Array only when the writer was created with E57Writer.ToBuffer()
 ```
 
 ---
