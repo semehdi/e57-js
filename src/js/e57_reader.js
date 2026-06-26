@@ -102,8 +102,11 @@ export class E57ReaderScan {
         const chunks = Math.ceil(scanPtsCount / chunkSize);
 
         if (callback) {
-            for (let iChunk = 0; iChunk < chunks; iChunk++)
-                callback(this.ReadPointsSync(chunkSize, transform));
+            for (let iChunk = 0; iChunk < chunks; iChunk++) {
+                const chunk = this.ReadPointsSync(chunkSize, transform);
+                callback(chunk);
+                chunk.delete();
+            }
             return;
         }
 
