@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import assert from 'node:assert/strict'
-import { E57, E57Reader, E57Writer } from '../dist/index.mjs'
+import { E57, E57Reader, E57Writer, E57WriterScan } from '../dist/index.mjs'
 
 export function createRandom(seed) {
     let s = seed >>> 0
@@ -112,6 +112,20 @@ export function makePoints(count) {
         pt.cartesianX = i; pt.cartesianY = i; pt.cartesianZ = i
         return pt
     })
+}
+
+export function makeScan(guid, count) {
+    const scan = new E57WriterScan()
+    scan.GetHeader().guid = guid
+    scan.GetHeader().pointFields.cartesianXField = true
+    scan.GetHeader().pointFields.cartesianYField = true
+    scan.GetHeader().pointFields.cartesianZField = true
+    for (let i = 0; i < count; i++) {
+        const pt = new E57.LibE57.Point()
+        pt.cartesianX = i; pt.cartesianY = i; pt.cartesianZ = i
+        scan.AddPoint(pt)
+    }
+    return scan
 }
 
 // Keeps the event loop alive while a WASM pthread posts its result back to the

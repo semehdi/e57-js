@@ -309,6 +309,59 @@ export class E57WriterImage
 }
 
 /**
+ * Holds the header and points for a single 3D scan to be written to an E57 file.
+ *
+ * Pass an instance of this class to `E57Writer.AddScan()` or `E57Writer.AddScanSync()`.
+ */
+export class E57WriterScan
+{
+    constructor()
+    {
+        this._header = new E57.LibE57.Data3D();
+        this._points = [];
+    }
+
+    GetHeader() 
+    { 
+        return this._header; 
+    }
+
+    SetHeader(header) 
+    { 
+        if (this._header)
+            this._header.delete(); 
+        this._header = header; 
+    }
+
+    GetPoints() 
+    { 
+        return this._points; 
+    }
+    
+    AddPoint(point)
+    {
+        if (this._points)
+            this._points.push(point);
+    }
+
+    Destroy()
+    {
+        if (this._header)
+        {
+            this._header.delete();
+            this._header = null;
+        }
+        
+        for (const pt of this._points)
+        {
+            if (pt)
+                pt.delete();
+        }
+        this._points = [];
+    }
+}
+
+/**
  * Creates a new E57 file and writes 3D scans and 2D images to it.
  *
  * Call `Close()` when done to flush and finalise the file.
@@ -332,7 +385,7 @@ export class E57Writer
         const guid = crypto.randomUUID();
         this._bufferFileMemFSFilePath = "/" + guid + ".e57";
         const inputFilePath = toBuffer ? this._bufferFileMemFSFilePath : path.join(E57.RootDir, path.resolve(filePath));
-        this.writer = new E57.LibE57.E57Writer(inputFilePath);
+        this._writer = new E57.LibE57.E57Writer(inputFilePath);
         this._toBuffer = toBuffer;
     }
 
@@ -367,7 +420,7 @@ export class E57Writer
     AddImage(image)
     {
         return Promise.all([image.GetBuffer(), image.GetMetadata()])
-            .then(([bufferData, meta]) => this.writer.AddImage(
+            .then(([bufferData, meta]) => this._writer.AddImage(
                 image.GetHeader(), image.GetType(), image.GetProjection(),
                 0, bufferData, bufferData.length, meta.width, meta.height
             ).then(Number));
@@ -380,9 +433,11 @@ export class E57Writer
      * @param {object[]} points     - Array of `Point` objects.
      * @returns {number} Zero-based index assigned to the new scan.
      */
-    AddScanSync(scanHeader, points)
+    AddScanSync(scan)
     {
-        return Number(this.writer.AddScanSync(scanHeader, points));
+        const header = scan.GetHeader();
+        const points = scan.GetPoints();
+        return Number(this._writer.AddScanSync(header, points));
     }
 
     /**
@@ -393,9 +448,11 @@ export class E57Writer
      * @param {object[]} points     - Array of `Point` objects.
      * @returns {Promise<number>} Resolves with the zero-based index assigned to the new scan.
      */
-    AddScan(scanHeader, points)
+    AddScan(scan)
     {
-        return this.writer.AddScan(scanHeader, points).then(Number);
+        const header = scan.GetHeader();
+        const pts    = scan.GetPoints();
+        return this._writer.AddScan(header, pts).then(Number);
     }
 
     /**
@@ -424,8 +481,8 @@ export class E57Writer
      */
     Close()
     {
-        this.writer.Close();
-        this.writer.delete()
+        this._writer.Close();
+        this._writer.delete()
         if (this._toBuffer) {
             const bytes = E57.LibE57.FS.readFile(this._bufferFileMemFSFilePath);
             E57.LibE57.FS.unlink(this._bufferFileMemFSFilePath);

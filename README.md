@@ -135,51 +135,45 @@ const writer = E57Writer.ToBuffer()
 
 ### Write a 3D scan
 
-First, describe what fields your points will have (the header), then pass your array of points:
-
 ```js
-// 1 — describe the scan
-const header = new E57.LibE57.Data3D()
-header.guid = 'my-unique-scan-id'
-header.pointFields.cartesianXField = true
-header.pointFields.cartesianYField = true
-header.pointFields.cartesianZField = true
+import { E57WriterScan } from 'e57-js'
 
-// 2 — build the points
-const points = []
+const scan = new E57WriterScan()
+scan.GetHeader().guid = 'my-unique-scan-id'
+scan.GetHeader().pointFields.cartesianXField = true
+scan.GetHeader().pointFields.cartesianYField = true
+scan.GetHeader().pointFields.cartesianZField = true
+
 for (let i = 0; i < 100; i++) {
     const pt = new E57.LibE57.Point()
     pt.cartesianX = i * 0.1
     pt.cartesianY = 0
     pt.cartesianZ = 0
-    points.push(pt)
+    scan.AddPoint(pt)
 }
 
-// 3 — write (async)
-const scanIndex = await writer.AddScan(header, points)
-
-// 4 — free WASM memory
-for (const pt of points) pt.delete()
-header.delete()
+const scanIndex = await writer.AddScan(scan)
+scan.Destroy()
 ```
 
 ### Write a scan with colour
 
 ```js
-const header = new E57.LibE57.Data3D()
-header.pointFields.cartesianXField = true
-header.pointFields.cartesianYField = true
-header.pointFields.cartesianZField = true
-header.pointFields.colorRedField   = true
-header.pointFields.colorGreenField = true
-header.pointFields.colorBlueField  = true
-header.colorLimits.colorRedMaximum   = 255
-header.colorLimits.colorGreenMaximum = 255
-header.colorLimits.colorBlueMaximum  = 255
+const scan = new E57WriterScan()
+scan.GetHeader().pointFields.cartesianXField = true
+scan.GetHeader().pointFields.cartesianYField = true
+scan.GetHeader().pointFields.cartesianZField = true
+scan.GetHeader().pointFields.colorRedField   = true
+scan.GetHeader().pointFields.colorGreenField = true
+scan.GetHeader().pointFields.colorBlueField  = true
+scan.GetHeader().colorLimits.colorRedMaximum   = 255
+scan.GetHeader().colorLimits.colorGreenMaximum = 255
+scan.GetHeader().colorLimits.colorBlueMaximum  = 255
 
 const pt = new E57.LibE57.Point()
 pt.cartesianX = 1.0; pt.cartesianY = 2.0; pt.cartesianZ = 3.0
-pt.colorRed = 255; pt.colorGreen = 0; pt.colorBlue = 0  // red point
+pt.colorRed = 255; pt.colorGreen = 0; pt.colorBlue = 0
+scan.AddPoint(pt)
 ```
 
 ### Set the scanner position (pose)
@@ -187,13 +181,13 @@ pt.colorRed = 255; pt.colorGreen = 0; pt.colorBlue = 0  // red point
 If you know where the scanner was placed, you can store that as a pose. Use an identity quaternion `(w=1, x=0, y=0, z=0)` if there is no rotation:
 
 ```js
-header.pose.rotation.w = 1.0
-header.pose.rotation.x = 0.0
-header.pose.rotation.y = 0.0
-header.pose.rotation.z = 0.0
-header.pose.translation.x = 10.0   // scanner was 10 m east
-header.pose.translation.y = 20.0   // 20 m north
-header.pose.translation.z = 1.5    // 1.5 m above ground
+scan.GetHeader().pose.rotation.w = 1.0
+scan.GetHeader().pose.rotation.x = 0.0
+scan.GetHeader().pose.rotation.y = 0.0
+scan.GetHeader().pose.rotation.z = 0.0
+scan.GetHeader().pose.translation.x = 10.0   // scanner was 10 m east
+scan.GetHeader().pose.translation.y = 20.0   // 20 m north
+scan.GetHeader().pose.translation.z = 1.5    // 1.5 m above ground
 ```
 
 ### Write an image

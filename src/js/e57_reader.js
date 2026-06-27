@@ -17,22 +17,25 @@ export class E57ReaderScan {
     {
         this.e57Reader = e57Reader;
         this.scanIdx = scanIdx;
-        this._header = e57Reader.GetData3DHeader(scanIdx);
+        this._header = null;
     }
 
     /**
-     * Returns the cached `Data3D` header for this scan.
+     * Returns the `Data3D` header for this scan, fetching and caching it on first call.
      *
      * @returns {object} `Data3D` struct from libE57Format.
      */
     GetHeader()
     {
+        if (!this._header)
+            this._header = this.e57Reader.GetData3DHeader(this.scanIdx);
         return this._header;
     }
 
     Destroy()
     {
-        this._header.delete();
+        if (this._header)
+            this._header.delete();
     }
 
     /**
@@ -42,7 +45,7 @@ export class E57ReaderScan {
      */
     ReadScan(transform = true)
     {
-        return this.ReadPoints(Number(this._header.pointCount), transform);
+        return this.ReadPoints(Number(this.GetHeader().pointCount), transform);
     }
 
     /**
@@ -137,22 +140,25 @@ export class E57ReaderImage
     {
         this._e57Reader = e57Reader;
         this._imageIdx = imageIdx;
-        this._header = e57Reader.GetImage2DHeader(imageIdx);
+        this._header = null;
     }
 
     /**
-     * Returns the cached `ImageHeader` for this image.
+     * Returns the `ImageHeader` for this image, fetching and caching it on first call.
      *
      * @returns {object} `ImageHeader` struct from libE57Format.
      */
     GetHeader()
     {
+        if (!this._header)
+            this._header = this._e57Reader.GetImage2DHeader(this._imageIdx);
         return this._header;
     }
 
     Destroy()
     {
-        this._header.delete();
+        if (this._header)
+            this._header.delete();
     }
 
     /**
