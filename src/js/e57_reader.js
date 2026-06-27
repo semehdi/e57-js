@@ -278,20 +278,20 @@ export class E57Reader {
     constructor(filePath, isMemFS = false)
     {
         const inputFilePath = isMemFS ? filePath : path.join(E57.RootDir, path.resolve(filePath));
-        this.reader = new E57.LibE57.E57Reader(inputFilePath);
+        this._reader = new E57.LibE57.E57Reader(inputFilePath);
 
         var scansCount = this.GetData3DCount();
         this.scans = new Array(scansCount);
         for (var iScan = 0; iScan < scansCount; iScan++)
         {
-            this.scans[iScan] = new E57ReaderScan(this.reader, iScan);
+            this.scans[iScan] = new E57ReaderScan(this._reader, iScan);
         }
 
         var imagesCount = this.GetImage2DCount();
         this.images = new Array(imagesCount);
         for (var iImage = 0; iImage < imagesCount; iImage++)
         {
-            this.images[iImage] = new E57ReaderImage(this.reader, iImage);
+            this.images[iImage] = new E57ReaderImage(this._reader, iImage);
         }
     }
 
@@ -314,9 +314,11 @@ export class E57Reader {
      */
     static FromBuffer(buffer)
     {
-        const memFsFilePath = "/input.e57";
+        const memFsFilePath = "/" + crypto.randomUUID() + ".e57";
         E57.LibE57.FS.writeFile(memFsFilePath, buffer);
-        return new E57Reader(memFsFilePath, true);
+        const reader = new E57Reader(memFsFilePath, true);
+        reader._memFsFilePath = memFsFilePath;
+        return reader;
     }
 
     /**
@@ -326,7 +328,7 @@ export class E57Reader {
      */
     GetHeader()
     {
-        return this.reader.GetHeader();
+        return this._reader.GetHeader();
     }
 
     /**
@@ -336,7 +338,7 @@ export class E57Reader {
      */
     GetData3DCount()
     {
-        return Number(this.reader.GetData3DCount());
+        return Number(this._reader.GetData3DCount());
     }
 
     /**
@@ -346,7 +348,7 @@ export class E57Reader {
      */
     GetImage2DCount()
     {
-        return Number(this.reader.GetImage2DCount());
+        return Number(this._reader.GetImage2DCount());
     }
 
     /**
@@ -378,8 +380,16 @@ export class E57Reader {
     {
         for (const scan  of this.scans)  scan.Destroy();
         for (const image of this.images) image.Destroy();
-        this.reader.Close();
-        this.reader.delete();
+        
+        if (this._reader)
+        {
+            this._reader.Close();
+            this._reader.delete();
+        }
+        
+        if (this._memFsFilePath)
+            E57.LibE57.FS.unlink(this._memFsFilePath);
+        
         this.scans  = null;
         this.images = null;
     }

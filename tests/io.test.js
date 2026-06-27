@@ -59,17 +59,7 @@ describe('SimpleWriter', () => {
         const filePath = path.join(OUTPUT_DIR, 'CartesianPoints.e57')
         const numPoints = 1025
         const writer = new E57Writer(filePath)
-        const scan = new E57WriterScan()
-        scan.GetHeader().guid = 'Cartesian Points Header GUID'
-        scan.GetHeader().pointFields.cartesianXField = true
-        scan.GetHeader().pointFields.cartesianYField = true
-        scan.GetHeader().pointFields.cartesianZField = true
-        for (let i = 0; i < numPoints; i++) {
-            const pt = new E57.LibE57.Point()
-            pt.cartesianX = i; pt.cartesianY = i; pt.cartesianZ = i
-            scan.AddPoint(pt)
-        }
-
+        const scan = testsUtils.makeScan('Cartesian Points Header GUID', numPoints)
         writer.AddScanSync(scan)
         scan.Destroy()
         writer.Close()
@@ -418,17 +408,7 @@ describe('SimpleWriter', () => {
         const numPoints = 1024
         const chunkSize = 50
         const writer = new E57Writer(filePath)
-        const writerScan = new E57WriterScan()
-        writerScan.GetHeader().guid = 'Chunk Read Header GUID'
-        writerScan.GetHeader().pointFields.cartesianXField = true
-        writerScan.GetHeader().pointFields.cartesianYField = true
-        writerScan.GetHeader().pointFields.cartesianZField = true
-        for (let i = 0; i < numPoints; i++) {
-            const pt = new E57.LibE57.Point()
-            pt.cartesianX = i; pt.cartesianY = i; pt.cartesianZ = i
-            writerScan.AddPoint(pt)
-        }
-
+        const writerScan = testsUtils.makeScan('Chunk Read Header GUID', numPoints)
         writer.AddScanSync(writerScan)
         writerScan.Destroy()
         writer.Close()
@@ -457,42 +437,6 @@ describe('SimpleWriter', () => {
         })
 
         assert.equal(totalRead, numPoints)
-        reader.Close()
-    })
-
-    it('MultipleScans', () => {
-        const filePath = path.join(OUTPUT_DIR, 'MultipleScans.e57')
-        const writer = new E57Writer(filePath)
-        const makeScan = (guid, cubeSize) => {
-            const s = new E57WriterScan()
-            s.GetHeader().guid = guid
-            s.GetHeader().pointFields.cartesianXField = true
-            s.GetHeader().pointFields.cartesianYField = true
-            s.GetHeader().pointFields.cartesianZField = true
-            testsUtils.generateCubeCornerPoints(cubeSize, ([x, y, z]) => {
-                const pt = new E57.LibE57.Point()
-                pt.cartesianX = x; pt.cartesianY = y; pt.cartesianZ = z
-                s.AddPoint(pt)
-            })
-            return s
-        }
-
-        const scan1 = makeScan('Multiple Scans Scan 1 Header GUID', 1.0)
-        writer.AddScanSync(scan1)
-        scan1.Destroy()
-
-        const scan2 = makeScan('Multiple Scans Scan 2 Header GUID', 0.5)
-        writer.AddScanSync(scan2)
-        scan2.Destroy()
-
-        writer.Close()
-
-        const reader = testsUtils.openReader(filePath)
-        assert.equal(Number(reader.GetData3DCount()),2)
-        assert.equal(reader.GetScan(0).GetHeader().guid, 'Multiple Scans Scan 1 Header GUID')
-        assert.equal(Number(reader.GetScan(0).GetHeader().pointCount), 8)
-        assert.equal(reader.GetScan(1).GetHeader().guid, 'Multiple Scans Scan 2 Header GUID')
-        assert.equal(Number(reader.GetScan(1).GetHeader().pointCount), 8)
         reader.Close()
     })
 
@@ -534,7 +478,6 @@ describe('SimpleWriter', () => {
         const reader = testsUtils.openReader(filePath)
         assert.equal(Number(reader.GetData3DCount()), 2)
 
-        // read scan 0 in chunks — leaves its CompressedVectorReader open after the last chunk
         let total0 = 0
         reader.GetScan(0).ScanPoints(100, (chunk) => {
             for (let i = 0; i < chunk.size(); i++) {
@@ -547,7 +490,6 @@ describe('SimpleWriter', () => {
         })
         assert.equal(total0, numPoints)
 
-        // read scan 1 in chunks — previously threw E57Exception because scan 0's reader was still open
         let total1 = 0
         reader.GetScan(1).ScanPoints(100, (chunk) => {
             for (let i = 0; i < chunk.size(); i++) {

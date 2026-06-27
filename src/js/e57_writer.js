@@ -481,8 +481,12 @@ export class E57Writer
      */
     Close()
     {
-        this._writer.Close();
-        this._writer.delete()
+        if (this._writer)
+        {
+            this._writer.Close();
+            this._writer.delete();
+        }
+        
         if (this._toBuffer) {
             const bytes = E57.LibE57.FS.readFile(this._bufferFileMemFSFilePath);
             E57.LibE57.FS.unlink(this._bufferFileMemFSFilePath);

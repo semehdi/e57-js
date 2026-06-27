@@ -19,7 +19,7 @@ EM_JS(emscripten::EM_VAL, _emjs_array_view, (void* ptr, int32_t size, int32_t el
     var freed = false;
     arr.free = function() { if (!freed) { freed = true; _free(ptr); } };
     if (!globalThis._e57Finalizer)
-        globalThis._e57Finalizer = new FinalizationRegistry(function(cb) { cb(); });
+        globalThis._e57Finalizer = new FinalizationRegistry(function(freeWasmMemory) { freeWasmMemory(); });
     globalThis._e57Finalizer.register(arr, arr.free);
     return Emval.toHandle(arr);
 });
