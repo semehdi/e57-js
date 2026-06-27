@@ -294,6 +294,16 @@ export class E57WriterImage
         this._imageHeader.pose.rotation.y = y;
         this._imageHeader.pose.rotation.z = z;
     }
+
+    /**
+     * Frees the underlying Emscripten `ImageHeader` C++ object.
+     * Call this once the image has been written and is no longer needed.
+     */
+    destroy()
+    {
+        this._imageHeader.delete()
+        this._buffer = null
+    }
 }
 
 /**
@@ -413,7 +423,11 @@ export class E57Writer
     Close()
     {
         this.writer.Close();
-        if (this._toBuffer)
-            return E57.LibE57.FS.readFile(this._bufferFileMemFSFilePath);
+        this.writer.delete()
+        if (this._toBuffer) {
+            const bytes = E57.LibE57.FS.readFile(this._bufferFileMemFSFilePath);
+            E57.LibE57.FS.unlink(this._bufferFileMemFSFilePath);
+            return bytes;
+        }
     }
 }

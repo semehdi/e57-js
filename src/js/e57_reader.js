@@ -166,6 +166,18 @@ export class E57ReaderImage
     }
 
     /**
+     * Frees the WASM memory backing an image buffer returned by `ReadImageSync` or `ReadImage`.
+     * Call this once you are done with the buffer to release memory immediately
+     * rather than waiting for the garbage collector.
+     *
+     * @param {Uint8Array} buffer - The buffer previously returned by `ReadImageSync` or `ReadImage`.
+     */
+    destroy(buffer)
+    {
+        if (buffer && typeof buffer.free === 'function') buffer.free()
+    }
+
+    /**
      * Reads the image and converts it to a Base64-encoded string.
      *
      * @returns {Promise<string>} Resolves with the Base64 string.
@@ -173,7 +185,9 @@ export class E57ReaderImage
     ToBase64()
     {
         return this.ReadImage().then((imgData) => {
-            return Buffer.from(imgData).toString("base64");
+            const base64 = Buffer.from(imgData).toString("base64");
+            this.destroy(imgData);
+            return base64;
         });
     }
 
@@ -219,9 +233,9 @@ export class E57ReaderImage
         const outExtension = this.Extension();
         const newFilePath = filePath.replace(path.extname(filePath), outExtension);
         return this.ReadImage().then((imgData) => {
-            return fs.writeFile(newFilePath, imgData, (err) => {
-                if (err) throw err;
-            });
+            return fs.promises.writeFile(newFilePath, imgData).then(() => {
+                this.destroy(imgData)
+            })
         })
     }
 }
@@ -348,5 +362,8 @@ export class E57Reader {
     Close()
     {
         this.reader.Close();
+        this.reader.delete();
+        this.scans  = null;
+        this.images = null;
     }
 }

@@ -62,6 +62,9 @@ for (let i = 0; i < points.size(); i++) {
     const pt = points.get(i)
     console.log(pt.cartesianX, pt.cartesianY, pt.cartesianZ)
 }
+
+// free WASM memory when done
+points.delete()
 ```
 
 ### Read in chunks (better for large files)
@@ -74,6 +77,7 @@ await scan.ScanPoints(1000, (chunk) => {
         const pt = chunk.get(i)
         // process pt...
     }
+    // chunk is freed after this callback returns — do not hold references to it outside
 })
 ```
 
@@ -97,8 +101,10 @@ console.log(header.width, header.height)
 
 // Get the image as a byte buffer
 const bytes = await image.ReadImage()  // Uint8Array
+// use bytes...
+image.destroy(bytes)  // free WASM memory when done
 
-// Or save it directly to disk (extension is auto-detected)
+// Or save it directly to disk (extension is auto-detected — memory is freed automatically)
 await image.Save('output')   // writes output.jpeg or output.png
 ```
 
@@ -151,6 +157,10 @@ for (let i = 0; i < 100; i++) {
 
 // 3 — write (async)
 const scanIndex = await writer.AddScan(header, points)
+
+// 4 — free WASM memory
+for (const pt of points) pt.delete()
+header.delete()
 ```
 
 ### Write a scan with colour

@@ -16,9 +16,11 @@ EM_JS(void, _emjs_call_reject, (emscripten::EM_VAL reject_fn, const char* msg), 
 
 EM_JS(emscripten::EM_VAL, _emjs_array_view, (void* ptr, int32_t size, int32_t elementSize), {
     var arr = HEAPU8.subarray(ptr, ptr + size * elementSize);
+    var freed = false;
+    arr.free = function() { if (!freed) { freed = true; _free(ptr); } };
     if (!globalThis._e57Finalizer)
-        globalThis._e57Finalizer = new FinalizationRegistry(function(p) { _free(p); });
-    globalThis._e57Finalizer.register(arr, ptr);
+        globalThis._e57Finalizer = new FinalizationRegistry(function(cb) { cb(); });
+    globalThis._e57Finalizer.register(arr, arr.free);
     return Emval.toHandle(arr);
 });
 
