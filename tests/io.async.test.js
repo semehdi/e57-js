@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { E57, E57Reader, E57Writer, E57WriterImage } from '../dist/index.mjs'
+import { E57, E57Reader, E57Writer, E57WriterImage, E57WriterScan } from '../dist/index.mjs'
 import * as testsUtils from './utils.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -25,7 +25,9 @@ describe('SimpleWriter async', () => {
     it('AddScan resolves with scan index', async () => {
         const filePath = path.join(OUTPUT_DIR, 'AsyncScan.e57')
         const writer = new E57Writer(filePath)
-        const idx = await testsUtils.withKeepAlive(writer.AddScan(testsUtils.makeCartesianHeader('Async Scan GUID'), testsUtils.makePoints(50000)))
+        const scan = testsUtils.makeScan('Async Scan GUID', 50000)
+        const idx = await testsUtils.withKeepAlive(writer.AddScan(scan))
+        scan.Destroy()
         assert.equal(Number(idx), 0)
         writer.Close()
         assert.ok(fs.existsSync(filePath))
@@ -34,16 +36,17 @@ describe('SimpleWriter async', () => {
     it('AddScan sequential scans return incrementing indices', async () => {
         const filePath = path.join(OUTPUT_DIR, 'AsyncMultipleScans.e57')
         const writer = new E57Writer(filePath)
-        const header = testsUtils.makeCartesianHeader('Async Scan GUID')
+        const scan1 = testsUtils.makeScan('Async Scan 1 GUID', 8)
+        const idx0 = await testsUtils.withKeepAlive(writer.AddScan(scan1))
+        scan1.Destroy()
 
-        header.guid = 'Async Scan 1 GUID'
-        const idx0 = await testsUtils.withKeepAlive(writer.AddScan(header, testsUtils.makePoints(8)))
+        const scan2 = testsUtils.makeScan('Async Scan 2 GUID', 8)
+        const idx1 = await testsUtils.withKeepAlive(writer.AddScan(scan2))
+        scan2.Destroy()
 
-        header.guid = 'Async Scan 2 GUID'
-        const idx1 = await testsUtils.withKeepAlive(writer.AddScan(header, testsUtils.makePoints(8)))
-
-        header.guid = 'Async Scan 3 GUID'
-        const idx2 = await testsUtils.withKeepAlive(writer.AddScan(header, testsUtils.makePoints(8)))
+        const scan3 = testsUtils.makeScan('Async Scan 3 GUID', 8)
+        const idx2 = await testsUtils.withKeepAlive(writer.AddScan(scan3))
+        scan3.Destroy()
 
         assert.equal(Number(idx0), 0)
         assert.equal(Number(idx1), 1)
@@ -56,7 +59,9 @@ describe('SimpleWriter async', () => {
     it('AddScan with 1025 points', async () => {
         const filePath = path.join(OUTPUT_DIR, 'AsyncCartesianPoints.e57')
         const writer = new E57Writer(filePath)
-        const idx = await testsUtils.withKeepAlive(writer.AddScan(testsUtils.makeCartesianHeader('Async 1025 Points GUID'), testsUtils.makePoints(1025)))
+        const scan = testsUtils.makeScan('Async 1025 Points GUID', 1025)
+        const idx = await testsUtils.withKeepAlive(writer.AddScan(scan))
+        scan.Destroy()
         assert.equal(Number(idx), 0)
         writer.Close()
         assert.ok(fs.existsSync(filePath))
@@ -65,9 +70,14 @@ describe('SimpleWriter async', () => {
     it('AddScan with zero points', async () => {
         const filePath = path.join(OUTPUT_DIR, 'AsyncZeroPoints.e57')
         const writer = new E57Writer(filePath)
-        const header = testsUtils.makeCartesianHeader('Async Zero Points GUID')
-        header.cartesianBounds.xMinimum = 0.0
-        const idx = await testsUtils.withKeepAlive(writer.AddScan(header, []))
+        const scan = new E57WriterScan()
+        scan.GetHeader().guid = 'Async Zero Points GUID'
+        scan.GetHeader().pointFields.cartesianXField = true
+        scan.GetHeader().pointFields.cartesianYField = true
+        scan.GetHeader().pointFields.cartesianZField = true
+        scan.GetHeader().cartesianBounds.xMinimum = 0.0
+        const idx = await testsUtils.withKeepAlive(writer.AddScan(scan))
+        scan.Destroy()
         assert.equal(Number(idx), 0)
         writer.Close()
         assert.ok(fs.existsSync(filePath))
@@ -82,12 +92,12 @@ describe('SimpleWriter async', () => {
             E57.LibE57.Image2DProjection.ProjectionVisual
         )
 
-        image.setName('Front camera')
-        image.setGuid('Image-GUID-001')
-        image.setRotation(1.0, 0.0, 0.0, 0.0)
-        image.setTrasnlation(1.0, 2.0, 3.0)
+        image.SetName('Front camera')
+        image.SetGuid('Image-GUID-001')
+        image.SetRotation(1.0, 0.0, 0.0, 0.0)
+        image.SetTranslation(1.0, 2.0, 3.0)
 
-        const h = image.getHeader()
+        const h = image.GetHeader()
         h.description                          = 'Test image description'
         h.sensorVendor                         = 'e57-js'
         h.sensorModel                          = 'CamX-9000'
@@ -96,6 +106,7 @@ describe('SimpleWriter async', () => {
         h.setAcquisitionDateTime(1748822400.0, 0)
 
         const bytes = await testsUtils.withKeepAlive(writer.AddImage(image))
+        image.Destroy()
         writer.Close()
 
         const reader = testsUtils.openReader(filePath)
@@ -191,13 +202,19 @@ describe('SimpleWriter async', () => {
                 E57.LibE57.Image2DType.ImageJPEG,
                 E57.LibE57.Image2DProjection.ProjectionVisual
             )
-            img.setName(name)
+            img.SetName(name)
             return img
         }
 
-        await testsUtils.withKeepAlive(writer.AddImage(makeImage('Camera 1')))
-        await testsUtils.withKeepAlive(writer.AddImage(makeImage('Camera 2')))
-        await testsUtils.withKeepAlive(writer.AddImage(makeImage('Camera 3')))
+        const img1 = makeImage('Camera 1')
+        await testsUtils.withKeepAlive(writer.AddImage(img1))
+        img1.Destroy()
+        const img2 = makeImage('Camera 2')
+        await testsUtils.withKeepAlive(writer.AddImage(img2))
+        img2.Destroy()
+        const img3 = makeImage('Camera 3')
+        await testsUtils.withKeepAlive(writer.AddImage(img3))
+        img3.Destroy()
         writer.Close()
 
         const reader = testsUtils.openReader(filePath)
@@ -218,6 +235,7 @@ describe('SimpleWriter async', () => {
         )
 
         const bytes = await testsUtils.withKeepAlive(writer.AddImage(image))
+        image.Destroy()
         writer.Close()
 
         const sourceSize = fs.statSync(IMAGE_PATH).size
@@ -232,9 +250,10 @@ describe('SimpleWriter async', () => {
             E57.LibE57.Image2DType.ImageJPEG,
             E57.LibE57.Image2DProjection.ProjectionVisual
         )
-        image.setName('Rotated camera')
-        image.setRotation(1.0, 0.0, 0.0, 0.0)
+        image.SetName('Rotated camera')
+        image.SetRotation(1.0, 0.0, 0.0, 0.0)
         await testsUtils.withKeepAlive(writer.AddImage(image))
+        image.Destroy()
         writer.Close()
 
         const reader = testsUtils.openReader(filePath)
@@ -251,7 +270,9 @@ describe('SimpleWriter async', () => {
         const filePath = path.join(OUTPUT_DIR, 'AsyncScanAndImage.e57')
         const writer = new E57Writer(filePath)
 
-        const scanIdx = await testsUtils.withKeepAlive(writer.AddScan(testsUtils.makeCartesianHeader('Combined Scan GUID'), testsUtils.makePoints(32)))
+        const scan = testsUtils.makeScan('Combined Scan GUID', 32)
+        const scanIdx = await testsUtils.withKeepAlive(writer.AddScan(scan))
+        scan.Destroy()
         assert.equal(Number(scanIdx), 0)
 
         const image = new E57WriterImage(
@@ -260,6 +281,7 @@ describe('SimpleWriter async', () => {
             E57.LibE57.Image2DProjection.ProjectionVisual
         )
         const bytes = await testsUtils.withKeepAlive(writer.AddImage(image))
+        image.Destroy()
         assert.ok(Number(bytes) > 0)
 
         writer.Close()
@@ -287,7 +309,9 @@ describe('SimpleWriter async', () => {
         const filePath = path.join(OUTPUT_DIR, 'AsyncReadScanFromFile.e57')
         const numPoints = 64
         const writer = new E57Writer(filePath)
-        await testsUtils.withKeepAlive(writer.AddScan(testsUtils.makeCartesianHeader('ReadScan File GUID'), testsUtils.makePoints(numPoints)))
+        const scan = testsUtils.makeScan('ReadScan File GUID', numPoints)
+        await testsUtils.withKeepAlive(writer.AddScan(scan))
+        scan.Destroy()
         writer.Close()
 
         const reader = new E57Reader(filePath)
@@ -310,12 +334,15 @@ describe('SimpleWriter async', () => {
         const numPoints = 64
         const writer    = E57Writer.ToBuffer()
 
-        await testsUtils.withKeepAlive(writer.AddScan(testsUtils.makeCartesianHeader('FromBuffer Async GUID'), testsUtils.makePoints(numPoints)))
+        const scan = testsUtils.makeScan('FromBuffer Async GUID', numPoints)
+        await testsUtils.withKeepAlive(writer.AddScan(scan))
+        scan.Destroy()
 
         const imgBuf   = new Uint8Array(fs.readFileSync(IMAGE_PATH))
         const image    = E57WriterImage.FromBuffer(imgBuf, E57.LibE57.Image2DType.ImageJPEG, E57.LibE57.Image2DProjection.ProjectionVisual)
-        image.setName('FromBuffer image')
+        image.SetName('FromBuffer image')
         const imageBytes = await testsUtils.withKeepAlive(writer.AddImage(image))
+        image.Destroy()
         assert.ok(Number(imageBytes) > 0)
 
         const buffer = writer.Close()

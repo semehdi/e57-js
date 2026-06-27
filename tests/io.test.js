@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { E57, E57Reader, E57Writer } from '../dist/index.mjs'
+import { E57, E57Reader, E57Writer, E57WriterScan } from '../dist/index.mjs'
 import * as testsUtils from './utils.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -37,13 +37,14 @@ describe('SimpleWriter', () => {
     it('ZeroPoints', () => {
         const filePath = path.join(OUTPUT_DIR, 'ZeroPoints.e57')
         const writer = new E57Writer(filePath)
-        const header = new E57.LibE57.Data3D()
-        header.guid = 'Zero Points Header GUID'
-        header.pointFields.cartesianXField = true
-        header.pointFields.cartesianYField = true
-        header.pointFields.cartesianZField = true
-        header.cartesianBounds.xMinimum = 0.0
-        writer.AddScanSync(header, [])
+        const scan = new E57WriterScan()
+        scan.GetHeader().guid = 'Zero Points Header GUID'
+        scan.GetHeader().pointFields.cartesianXField = true
+        scan.GetHeader().pointFields.cartesianYField = true
+        scan.GetHeader().pointFields.cartesianZField = true
+        scan.GetHeader().cartesianBounds.xMinimum = 0.0
+        writer.AddScanSync(scan)
+        scan.Destroy()
         writer.Close()
 
         const reader = testsUtils.openReader(filePath)
@@ -58,19 +59,9 @@ describe('SimpleWriter', () => {
         const filePath = path.join(OUTPUT_DIR, 'CartesianPoints.e57')
         const numPoints = 1025
         const writer = new E57Writer(filePath)
-        const header = new E57.LibE57.Data3D()
-        header.guid = 'Cartesian Points Header GUID'
-        header.pointFields.cartesianXField = true
-        header.pointFields.cartesianYField = true
-        header.pointFields.cartesianZField = true
-
-        const points = Array.from({ length: numPoints }, (_, i) => {
-            const pt = new E57.LibE57.Point()
-            pt.cartesianX = i; pt.cartesianY = i; pt.cartesianZ = i
-            return pt
-        })
-
-        writer.AddScanSync(header, points)
+        const scan = testsUtils.makeScan('Cartesian Points Header GUID', numPoints)
+        writer.AddScanSync(scan)
+        scan.Destroy()
         writer.Close()
 
         const reader = testsUtils.openReader(filePath)
@@ -94,17 +85,18 @@ describe('SimpleWriter', () => {
         const filePath = path.join(OUTPUT_DIR, 'ColouredCartesianPoints.e57')
         const numPoints = 1025
         const writer = new E57Writer(filePath)
-        const header = testsUtils.makeColouredCartesianHeader()
-        header.guid = 'Coloured Cartesian Points Header GUID'
-
-        const points = Array.from({ length: numPoints }, (_, i) => {
+        const scan = new E57WriterScan()
+        scan.SetHeader(testsUtils.makeColouredCartesianHeader())
+        scan.GetHeader().guid = 'Coloured Cartesian Points Header GUID'
+        for (let i = 0; i < numPoints; i++) {
             const pt = new E57.LibE57.Point()
             pt.cartesianX = i; pt.cartesianY = i; pt.cartesianZ = i
             pt.colorRed = 0; pt.colorGreen = 0; pt.colorBlue = 255
-            return pt
-        })
+            scan.AddPoint(pt)
+        }
 
-        writer.AddScanSync(header, points)
+        writer.AddScanSync(scan)
+        scan.Destroy()
         writer.Close()
 
         const reader = testsUtils.openReader(filePath)
@@ -123,19 +115,20 @@ describe('SimpleWriter', () => {
         const MAX16 = 65535
 
         const writer = new E57Writer(filePath)
-        const header = testsUtils.make16BitColouredCartesianHeader()
-        header.guid = 'Coloured Cartesian Points 16-bit Header GUID'
-
-        const points = Array.from({ length: numPoints }, (_, i) => {
+        const scan = new E57WriterScan()
+        scan.SetHeader(testsUtils.make16BitColouredCartesianHeader())
+        scan.GetHeader().guid = 'Coloured Cartesian Points 16-bit Header GUID'
+        for (let i = 0; i < numPoints; i++) {
             const pt = new E57.LibE57.Point()
             pt.cartesianX = i; pt.cartesianY = i; pt.cartesianZ = i
             pt.colorRed   = Math.trunc(i * 1024)
             pt.colorGreen = Math.trunc(MAX16 - i * 1024)
             pt.colorBlue  = Math.trunc(Math.trunc(MAX16 / 2))
-            return pt
-        })
+            scan.AddPoint(pt)
+        }
 
-        writer.AddScanSync(header, points)
+        writer.AddScanSync(scan)
+        scan.Destroy()
         writer.Close()
 
         const reader = testsUtils.openReader(filePath)
@@ -163,21 +156,21 @@ describe('SimpleWriter', () => {
         const filePath = path.join(OUTPUT_DIR, 'ColouredCubeScaledInt.e57')
         const random = testsUtils.createRandom(42)
         const writer = new E57Writer(filePath)
-        const header = testsUtils.makeColouredCartesianHeader()
-        header.guid        = 'Cube Scaled Int Scan Header GUID'
-        header.description = 'e57-js test: cube of coloured points using scaled integers'
-        header.pointFields.pointRangeNodeType = E57.LibE57.NumericalNodeType.ScaledInteger
-        header.pointFields.pointRangeScale    = 0.001
-
-        const points = []
+        const scan = new E57WriterScan()
+        scan.SetHeader(testsUtils.makeColouredCartesianHeader())
+        scan.GetHeader().guid        = 'Cube Scaled Int Scan Header GUID'
+        scan.GetHeader().description = 'e57-js test: cube of coloured points using scaled integers'
+        scan.GetHeader().pointFields.pointRangeNodeType = E57.LibE57.NumericalNodeType.ScaledInteger
+        scan.GetHeader().pointFields.pointRangeScale    = 0.001
         testsUtils.generateCubePoints(1.0, 1280, random, (face, [x, y, z]) => {
             const pt = new E57.LibE57.Point()
             pt.cartesianX = x; pt.cartesianY = y; pt.cartesianZ = z
             ;[pt.colorRed, pt.colorGreen, pt.colorBlue] = testsUtils.FACE_COLORS[face]
-            points.push(pt)
+            scan.AddPoint(pt)
         })
 
-        writer.AddScanSync(header, points)
+        writer.AddScanSync(scan)
+        scan.Destroy()
         writer.Close()
 
         const reader = testsUtils.openReader(filePath)
@@ -198,33 +191,34 @@ describe('SimpleWriter', () => {
         const filePath = path.join(OUTPUT_DIR, 'GeorefScaledInt.e57')
         const numPoints = 128
         const writer = new E57Writer(filePath)
-        const header = new E57.LibE57.Data3D()
-        header.guid = 'Georef Scaled Int Header GUID'
-        header.pointFields.cartesianXField    = true
-        header.pointFields.cartesianYField    = true
-        header.pointFields.cartesianZField    = true
-        header.pointFields.pointRangeNodeType = E57.LibE57.NumericalNodeType.ScaledInteger
-        header.pointFields.pointRangeScale    = 0.001
+        const scan = new E57WriterScan()
+        scan.GetHeader().guid = 'Georef Scaled Int Header GUID'
+        scan.GetHeader().pointFields.cartesianXField    = true
+        scan.GetHeader().pointFields.cartesianYField    = true
+        scan.GetHeader().pointFields.cartesianZField    = true
+        scan.GetHeader().pointFields.pointRangeNodeType = E57.LibE57.NumericalNodeType.ScaledInteger
+        scan.GetHeader().pointFields.pointRangeScale    = 0.001
 
         // identity rotation — EPSG:3857 axes align with the scanner axes
-        header.pose.rotation.w = 1.0
-        header.pose.rotation.x = 0.0
-        header.pose.rotation.y = 0.0
-        header.pose.rotation.z = 0.0
-        header.pose.translation.x = ORIGIN_X
-        header.pose.translation.y = ORIGIN_Y
-        header.pose.translation.z = ORIGIN_Z
+        scan.GetHeader().pose.rotation.w = 1.0
+        scan.GetHeader().pose.rotation.x = 0.0
+        scan.GetHeader().pose.rotation.y = 0.0
+        scan.GetHeader().pose.rotation.z = 0.0
+        scan.GetHeader().pose.translation.x = ORIGIN_X
+        scan.GetHeader().pose.translation.y = ORIGIN_Y
+        scan.GetHeader().pose.translation.z = ORIGIN_Z
 
         // local points relative to the scanner position
-        const points = Array.from({ length: numPoints }, (_, i) => {
+        for (let i = 0; i < numPoints; i++) {
             const pt = new E57.LibE57.Point()
             pt.cartesianX = i * 0.25
             pt.cartesianY = i * 0.10
             pt.cartesianZ = i * 0.05
-            return pt
-        })
+            scan.AddPoint(pt)
+        }
 
-        writer.AddScanSync(header, points)
+        writer.AddScanSync(scan)
+        scan.Destroy()
         writer.Close()
 
         const reader = testsUtils.openReader(filePath)
@@ -272,32 +266,32 @@ describe('SimpleWriter', () => {
         const filePath = path.join(OUTPUT_DIR, 'GeorefSpherical.e57')
         const numPoints = 128
         const writer = new E57Writer(filePath)
-        const header = new E57.LibE57.Data3D()
-        header.guid = 'Georef Scaled Int Spherical Header GUID'
-        header.pointFields.sphericalRangeField     = true
-        header.pointFields.sphericalAzimuthField   = true
-        header.pointFields.sphericalElevationField = true
+        const scan = new E57WriterScan()
+        scan.GetHeader().guid = 'Georef Scaled Int Spherical Header GUID'
+        scan.GetHeader().pointFields.sphericalRangeField     = true
+        scan.GetHeader().pointFields.sphericalAzimuthField   = true
+        scan.GetHeader().pointFields.sphericalElevationField = true
 
         // identity rotation — EPSG:3857 axes align with the scanner axes
-        header.pose.rotation.w = 1.0
-        header.pose.rotation.x = 0.0
-        header.pose.rotation.y = 0.0
-        header.pose.rotation.z = 0.0
-        header.pose.translation.x = ORIGIN_X
-        header.pose.translation.y = ORIGIN_Y
-        header.pose.translation.z = ORIGIN_Z
+        scan.GetHeader().pose.rotation.w = 1.0
+        scan.GetHeader().pose.rotation.x = 0.0
+        scan.GetHeader().pose.rotation.y = 0.0
+        scan.GetHeader().pose.rotation.z = 0.0
+        scan.GetHeader().pose.translation.x = ORIGIN_X
+        scan.GetHeader().pose.translation.y = ORIGIN_Y
+        scan.GetHeader().pose.translation.z = ORIGIN_Z
 
         // local Cartesian offsets converted to spherical for storage
-        const points = Array.from({ length: numPoints }, (_, i) => {
+        for (let i = 0; i < numPoints; i++) {
             const pt = new E57.LibE57.Point()
             pt.cartesianX = (i + 1) * 0.25
             pt.cartesianY = (i + 1) * 0.10
             pt.cartesianZ = (i + 1) * 0.05
             pt.cartesianToSpherical()
-            return pt
-        })
+            scan.AddPoint(pt)
+        }
 
-        writer.AddScanSync(header, points)
+        writer.AddScanSync(scan)
         writer.Close()
 
         const reader = testsUtils.openReader(filePath)
@@ -331,10 +325,11 @@ describe('SimpleWriter', () => {
         const ptsNoTransform = reader.GetScan(0).ReadScanSync(false)
         for (let i = 0; i < numPoints; i++) {
             const pt = ptsNoTransform.get(i)
-            assert.ok(Math.abs(Number(pt.sphericalRange)     - points[i].sphericalRange)     < 1e-5)
-            assert.ok(Math.abs(Number(pt.sphericalAzimuth)   - points[i].sphericalAzimuth)   < 1e-5)
-            assert.ok(Math.abs(Number(pt.sphericalElevation) - points[i].sphericalElevation) < 1e-5)
+            assert.ok(Math.abs(Number(pt.sphericalRange)     - scan.GetPoints()[i].sphericalRange)     < 1e-5)
+            assert.ok(Math.abs(Number(pt.sphericalAzimuth)   - scan.GetPoints()[i].sphericalAzimuth)   < 1e-5)
+            assert.ok(Math.abs(Number(pt.sphericalElevation) - scan.GetPoints()[i].sphericalElevation) < 1e-5)
         }
+        scan.Destroy()
         reader.Close()
     })
 
@@ -350,30 +345,31 @@ describe('SimpleWriter', () => {
         const filePath = path.join(OUTPUT_DIR, 'CartesianPoseRotation.e57')
         const numPoints = 64
         const writer = new E57Writer(filePath)
-        const header = new E57.LibE57.Data3D()
-        header.guid = 'Cartesian Pose Rotation Header GUID'
-        header.pointFields.cartesianXField = true
-        header.pointFields.cartesianYField = true
-        header.pointFields.cartesianZField = true
+        const scan = new E57WriterScan()
+        scan.GetHeader().guid = 'Cartesian Pose Rotation Header GUID'
+        scan.GetHeader().pointFields.cartesianXField = true
+        scan.GetHeader().pointFields.cartesianYField = true
+        scan.GetHeader().pointFields.cartesianZField = true
 
-        header.pose.rotation.w = SQRT2_2
-        header.pose.rotation.x = 0.0
-        header.pose.rotation.y = 0.0
-        header.pose.rotation.z = SQRT2_2
-        header.pose.translation.x = TX
-        header.pose.translation.y = TY
-        header.pose.translation.z = TZ
+        scan.GetHeader().pose.rotation.w = SQRT2_2
+        scan.GetHeader().pose.rotation.x = 0.0
+        scan.GetHeader().pose.rotation.y = 0.0
+        scan.GetHeader().pose.rotation.z = SQRT2_2
+        scan.GetHeader().pose.translation.x = TX
+        scan.GetHeader().pose.translation.y = TY
+        scan.GetHeader().pose.translation.z = TZ
 
         // local points along the X axis
-        const points = Array.from({ length: numPoints }, (_, i) => {
+        for (let i = 0; i < numPoints; i++) {
             const pt = new E57.LibE57.Point()
             pt.cartesianX = i * 0.5
             pt.cartesianY = 0
             pt.cartesianZ = 0
-            return pt
-        })
+            scan.AddPoint(pt)
+        }
 
-        writer.AddScanSync(header, points)
+        writer.AddScanSync(scan)
+        scan.Destroy()
         writer.Close()
 
         const reader = testsUtils.openReader(filePath)
@@ -412,19 +408,9 @@ describe('SimpleWriter', () => {
         const numPoints = 1024
         const chunkSize = 50
         const writer = new E57Writer(filePath)
-        const header = new E57.LibE57.Data3D()
-        header.guid = 'Chunk Read Header GUID'
-        header.pointFields.cartesianXField = true
-        header.pointFields.cartesianYField = true
-        header.pointFields.cartesianZField = true
-
-        const points = Array.from({ length: numPoints }, (_, i) => {
-            const pt = new E57.LibE57.Point()
-            pt.cartesianX = i; pt.cartesianY = i; pt.cartesianZ = i
-            return pt
-        })
-
-        writer.AddScanSync(header, points)
+        const writerScan = testsUtils.makeScan('Chunk Read Header GUID', numPoints)
+        writer.AddScanSync(writerScan)
+        writerScan.Destroy()
         writer.Close()
 
         const reader = testsUtils.openReader(filePath)
@@ -454,75 +440,44 @@ describe('SimpleWriter', () => {
         reader.Close()
     })
 
-    it('MultipleScans', () => {
-        const filePath = path.join(OUTPUT_DIR, 'MultipleScans.e57')
-        const writer = new E57Writer(filePath)
-        const header = new E57.LibE57.Data3D()
-        header.pointFields.cartesianXField = true
-        header.pointFields.cartesianYField = true
-        header.pointFields.cartesianZField = true
-
-        const makeScan = (cubeSize) => {
-            const pts = []
-            testsUtils.generateCubeCornerPoints(cubeSize, ([x, y, z]) => {
-                const pt = new E57.LibE57.Point()
-                pt.cartesianX = x; pt.cartesianY = y; pt.cartesianZ = z
-                pts.push(pt)
-            })
-            return pts
-        }
-
-        header.guid = 'Multiple Scans Scan 1 Header GUID'
-        writer.AddScanSync(header, makeScan(1.0))
-
-        header.guid = 'Multiple Scans Scan 2 Header GUID'
-        writer.AddScanSync(header, makeScan(0.5))
-
-        writer.Close()
-
-        const reader = testsUtils.openReader(filePath)
-        assert.equal(Number(reader.GetData3DCount()),2)
-        assert.equal(reader.GetScan(0).GetHeader().guid, 'Multiple Scans Scan 1 Header GUID')
-        assert.equal(Number(reader.GetScan(0).GetHeader().pointCount), 8)
-        assert.equal(reader.GetScan(1).GetHeader().guid, 'Multiple Scans Scan 2 Header GUID')
-        assert.equal(Number(reader.GetScan(1).GetHeader().pointCount), 8)
-        reader.Close()
-    })
-
     it('MultipleScans read points from all scans', () => {
         const filePath  = path.join(OUTPUT_DIR, 'MultipleScansReadPoints.e57')
         const numPoints = 500
         const writer    = new E57Writer(filePath)
 
-        const makeHeader = (guid) => {
-            const h = new E57.LibE57.Data3D()
-            h.guid = guid
-            h.pointFields.cartesianXField = true
-            h.pointFields.cartesianYField = true
-            h.pointFields.cartesianZField = true
-            return h
-        }
-
         // scan 0: x = i, y = 0, z = 0
-        writer.AddScanSync(makeHeader('multi-scan-read-0'), Array.from({ length: numPoints }, (_, i) => {
+        const scan0 = new E57WriterScan()
+        scan0.GetHeader().guid = 'multi-scan-read-0'
+        scan0.GetHeader().pointFields.cartesianXField = true
+        scan0.GetHeader().pointFields.cartesianYField = true
+        scan0.GetHeader().pointFields.cartesianZField = true
+        for (let i = 0; i < numPoints; i++) {
             const pt = new E57.LibE57.Point()
             pt.cartesianX = i; pt.cartesianY = 0; pt.cartesianZ = 0
-            return pt
-        }))
+            scan0.AddPoint(pt)
+        }
+        writer.AddScanSync(scan0)
+        scan0.Destroy()
 
         // scan 1: x = 0, y = i, z = 0
-        writer.AddScanSync(makeHeader('multi-scan-read-1'), Array.from({ length: numPoints }, (_, i) => {
+        const scan1 = new E57WriterScan()
+        scan1.GetHeader().guid = 'multi-scan-read-1'
+        scan1.GetHeader().pointFields.cartesianXField = true
+        scan1.GetHeader().pointFields.cartesianYField = true
+        scan1.GetHeader().pointFields.cartesianZField = true
+        for (let i = 0; i < numPoints; i++) {
             const pt = new E57.LibE57.Point()
             pt.cartesianX = 0; pt.cartesianY = i; pt.cartesianZ = 0
-            return pt
-        }))
+            scan1.AddPoint(pt)
+        }
+        writer.AddScanSync(scan1)
+        scan1.Destroy()
 
         writer.Close()
 
         const reader = testsUtils.openReader(filePath)
         assert.equal(Number(reader.GetData3DCount()), 2)
 
-        // read scan 0 in chunks — leaves its CompressedVectorReader open after the last chunk
         let total0 = 0
         reader.GetScan(0).ScanPoints(100, (chunk) => {
             for (let i = 0; i < chunk.size(); i++) {
@@ -535,7 +490,6 @@ describe('SimpleWriter', () => {
         })
         assert.equal(total0, numPoints)
 
-        // read scan 1 in chunks — previously threw E57Exception because scan 0's reader was still open
         let total1 = 0
         reader.GetScan(1).ScanPoints(100, (chunk) => {
             for (let i = 0; i < chunk.size(); i++) {
@@ -554,22 +508,20 @@ describe('SimpleWriter', () => {
         const filePath = path.join(OUTPUT_DIR, 'SphericalCubePoints.e57')
         const random = testsUtils.createRandom(42)
         const writer = new E57Writer(filePath)
-        const header = new E57.LibE57.Data3D()
-        header.guid = 'Spherical Cube Points Header GUID'
-        header.pointFields.sphericalRangeField     = true
-        header.pointFields.sphericalAzimuthField   = true
-        header.pointFields.sphericalElevationField = true
-
-        const points = []
+        const scan = new E57WriterScan()
+        scan.GetHeader().guid = 'Spherical Cube Points Header GUID'
+        scan.GetHeader().pointFields.sphericalRangeField     = true
+        scan.GetHeader().pointFields.sphericalAzimuthField   = true
+        scan.GetHeader().pointFields.sphericalElevationField = true
         testsUtils.generateSphericalCubePoints(1.0, 1280, random, (_, { range, azimuth, elevation }) => {
             const pt = new E57.LibE57.Point()
             pt.sphericalRange     = range
             pt.sphericalAzimuth   = azimuth
             pt.sphericalElevation = elevation
-            points.push(pt)
+            scan.AddPoint(pt)
         })
 
-        writer.AddScanSync(header, points)
+        writer.AddScanSync(scan)
         writer.Close()
 
         const reader = testsUtils.openReader(filePath)
@@ -583,9 +535,10 @@ describe('SimpleWriter', () => {
         const read = reader.GetScan(0).ReadScanSync()
         const first = read.get(0)
         assert.ok(Number(first.sphericalRange) > 0)
-        assert.ok(Math.abs(Number(first.sphericalRange)     - points[0].sphericalRange)     < 1e-5)
-        assert.ok(Math.abs(Number(first.sphericalAzimuth)   - points[0].sphericalAzimuth)   < 1e-5)
-        assert.ok(Math.abs(Number(first.sphericalElevation) - points[0].sphericalElevation) < 1e-5)
+        assert.ok(Math.abs(Number(first.sphericalRange)     - scan.GetPoints()[0].sphericalRange)     < 1e-5)
+        assert.ok(Math.abs(Number(first.sphericalAzimuth)   - scan.GetPoints()[0].sphericalAzimuth)   < 1e-5)
+        assert.ok(Math.abs(Number(first.sphericalElevation) - scan.GetPoints()[0].sphericalElevation) < 1e-5)
+        scan.Destroy()
         reader.Close()
     })
 
@@ -610,9 +563,9 @@ describe('SimpleWriter', () => {
     it('ToBuffer', () => {
         const numPoints = 64
         const writer = E57Writer.ToBuffer()
-        const header = testsUtils.makeCartesianHeader('ToBuffer Header GUID')
-
-        writer.AddScanSync(header, testsUtils.makePoints(numPoints))
+        const scan = testsUtils.makeScan('ToBuffer Header GUID', numPoints)
+        writer.AddScanSync(scan)
+        scan.Destroy()
         const bytes = writer.Close()
 
         assert.ok(bytes instanceof Uint8Array)
@@ -637,9 +590,9 @@ describe('SimpleWriter', () => {
         const filePath = path.join(OUTPUT_DIR, 'FromBuffer.e57')
         const numPoints = 64
         const writer = new E57Writer(filePath)
-        const header = testsUtils.makeCartesianHeader('FromBuffer Header GUID')
-
-        writer.AddScanSync(header, testsUtils.makePoints(numPoints))
+        const scan = testsUtils.makeScan('FromBuffer Header GUID', numPoints)
+        writer.AddScanSync(scan)
+        scan.Destroy()
         writer.Close()
 
         const buffer = fs.readFileSync(filePath)

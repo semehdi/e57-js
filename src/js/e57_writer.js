@@ -15,8 +15,8 @@ import sharp from "sharp"
  *     E57.LibE57.Image2DType.ImageJPEG,
  *     E57.LibE57.Image2DProjection.ProjectionVisual
  * )
- * image.setName("Front camera")
- * image.setRotation(w, x, y, z)
+ * image.SetName("Front camera")
+ * image.SetRotation(w, x, y, z)
  * await writer.AddImage(image)
  */
 export class E57WriterImage
@@ -57,7 +57,7 @@ export class E57WriterImage
      *
      * @returns {string}
      */
-    getPath()
+    GetPath()
     {
         return this._imgPath;
     }
@@ -65,7 +65,7 @@ export class E57WriterImage
     /**
      * @param {string} imgPath
      */
-    setPath(imgPath)
+    SetPath(imgPath)
     {
         this._imgPath = imgPath;
     }
@@ -75,7 +75,7 @@ export class E57WriterImage
      *
      * @returns {number}
      */
-    getType()
+    GetType()
     {
         return this._imgType
     }
@@ -83,7 +83,7 @@ export class E57WriterImage
     /**
      * @param {number} imgType - `Image2DType` enum value.
      */
-    setType(imgType)
+    SetType(imgType)
     {
         this._imgType = imgType;
     }
@@ -93,7 +93,7 @@ export class E57WriterImage
      *
      * @returns {number}
      */
-    getProjection()
+    GetProjection()
     {
         return this._imgProjection;
     }
@@ -101,7 +101,7 @@ export class E57WriterImage
     /**
      * @param {number} imgProjection - `Image2DProjection` enum value.
      */
-    setProjection(imgProjection)
+    SetProjection(imgProjection)
     {
         this._imgProjection = imgProjection;
     }
@@ -121,7 +121,7 @@ export class E57WriterImage
         if (this._metadataPromise) return this._metadataPromise;
 
         if (typeof window !== 'undefined') {
-            this._metadataPromise = this.getBuffer().then(buf => {
+            this._metadataPromise = this.GetBuffer().then(buf => {
                 const blob = new Blob([buf])
                 return createImageBitmap(blob).then(bitmap => {
                     const meta = { width: bitmap.width, height: bitmap.height }
@@ -132,7 +132,7 @@ export class E57WriterImage
                 })
             })
         } else {
-            this._metadataPromise = this.getBuffer().then(buf => sharp(buf).metadata()).then(meta => {
+            this._metadataPromise = this.GetBuffer().then(buf => sharp(buf).metadata()).then(meta => {
                 this._width  = meta.width
                 this._height = meta.height
                 return meta
@@ -147,7 +147,7 @@ export class E57WriterImage
      *
      * @returns {Promise<{width: number, height: number}>}
      */
-    getMetadata()
+    GetMetadata()
     {
         return this._resolveMetadata();
     }
@@ -157,7 +157,7 @@ export class E57WriterImage
      *
      * @returns {Promise<[number, number]>}
      */
-    getDimensions()
+    GetDimensions()
     {
         return this._resolveMetadata().then(meta => [meta.width, meta.height]);
     }
@@ -165,7 +165,7 @@ export class E57WriterImage
     /**
      * @returns {Promise<number>} Width in pixels.
      */
-    getWidth()
+    GetWidth()
     {
         return this._resolveMetadata().then(meta => meta.width);
     }
@@ -173,7 +173,7 @@ export class E57WriterImage
     /**
      * @returns {Promise<number>} Height in pixels.
      */
-    getHeight()
+    GetHeight()
     {
         return this._resolveMetadata().then(meta => meta.height);
     }
@@ -183,7 +183,7 @@ export class E57WriterImage
      *
      * @returns {object}
      */
-    getPose()
+    GetPose()
     {
         return this._imageHeader.pose;
     }
@@ -191,7 +191,7 @@ export class E57WriterImage
     /**
      * @param {object} imgPose - `RigidBodyTransform` value.
      */
-    setPose(imgPose)
+    SetPose(imgPose)
     {
         this._imageHeader.pose = imgPose;
     }
@@ -199,7 +199,7 @@ export class E57WriterImage
     /**
      * @returns {string}
      */
-    getName()
+    GetName()
     {
         return this._imageHeader.name;
     }
@@ -207,7 +207,7 @@ export class E57WriterImage
     /**
      * @param {string} imgName
      */
-    setName(imgName)
+    SetName(imgName)
     {
         this._imageHeader.name = imgName;
     }
@@ -215,7 +215,7 @@ export class E57WriterImage
     /**
      * @returns {string}
      */
-    getGuid()
+    GetGuid()
     {
         return this._imageHeader.guid;
     }
@@ -223,7 +223,7 @@ export class E57WriterImage
     /**
      * @param {string} imgGuid
      */
-    setGuid(imgGuid)
+    SetGuid(imgGuid)
     {
         this._imageHeader.guid = imgGuid;
     }
@@ -233,7 +233,7 @@ export class E57WriterImage
      *
      * @returns {object} `ImageHeader` struct from libE57Format.
      */
-    getHeader()
+    GetHeader()
     {
         return this._imageHeader;
     }
@@ -243,8 +243,9 @@ export class E57WriterImage
      *
      * @param {object} imgHeader - `ImageHeader` struct from libE57Format.
      */
-    setHeader(imgHeader)
+    SetHeader(imgHeader)
     {
+        this._imageHeader.delete();
         this._imageHeader = imgHeader;
     }
 
@@ -253,16 +254,16 @@ export class E57WriterImage
      *
      * @returns {Uint8Array}
      */
-    getBufferSync()
+    GetBufferSync()
     {
         if (this._buffer) return this._buffer;
-        return new Uint8Array(fs.readFileSync(this.getPath()));
+        return new Uint8Array(fs.readFileSync(this.GetPath()));
     }
 
-    getBuffer()
+    GetBuffer()
     {
         if (this._buffer) return Promise.resolve(this._buffer);
-        return fs.promises.readFile(this.getPath()).then(buf => new Uint8Array(buf));
+        return fs.promises.readFile(this.GetPath()).then(buf => new Uint8Array(buf));
     }
 
     /**
@@ -272,7 +273,7 @@ export class E57WriterImage
      * @param {number} y
      * @param {number} z
      */
-    setTrasnlation(x, y ,z)
+    SetTranslation(x, y ,z)
     {
         this._imageHeader.pose.translation.x = x;
         this._imageHeader.pose.translation.y = y;
@@ -287,12 +288,76 @@ export class E57WriterImage
      * @param {number} y
      * @param {number} z
      */
-    setRotation(w, x, y, z)
+    SetRotation(w, x, y, z)
     {
         this._imageHeader.pose.rotation.w = w;
         this._imageHeader.pose.rotation.x = x;
         this._imageHeader.pose.rotation.y = y;
         this._imageHeader.pose.rotation.z = z;
+    }
+
+    /**
+     * Frees the underlying Emscripten `ImageHeader` C++ object.
+     * Call this once the image has been written and is no longer needed.
+     */
+    Destroy()
+    {
+        this._imageHeader.delete()
+        this._imageHeader = null
+        this._buffer = null
+    }
+}
+
+/**
+ * Holds the header and points for a single 3D scan to be written to an E57 file.
+ *
+ * Pass an instance of this class to `E57Writer.AddScan()` or `E57Writer.AddScanSync()`.
+ */
+export class E57WriterScan
+{
+    constructor()
+    {
+        this._header = new E57.LibE57.Data3D();
+        this._points = [];
+    }
+
+    GetHeader() 
+    { 
+        return this._header; 
+    }
+
+    SetHeader(header) 
+    { 
+        if (this._header)
+            this._header.delete(); 
+        this._header = header; 
+    }
+
+    GetPoints() 
+    { 
+        return this._points; 
+    }
+    
+    AddPoint(point)
+    {
+        if (this._points)
+            this._points.push(point);
+    }
+
+    Destroy()
+    {
+        if (this._header)
+        {
+            this._header.delete();
+            this._header = null;
+        }
+        
+        for (const pt of this._points)
+        {
+            if (pt)
+                pt.delete();
+        }
+        this._points = [];
     }
 }
 
@@ -320,7 +385,7 @@ export class E57Writer
         const guid = crypto.randomUUID();
         this._bufferFileMemFSFilePath = "/" + guid + ".e57";
         const inputFilePath = toBuffer ? this._bufferFileMemFSFilePath : path.join(E57.RootDir, path.resolve(filePath));
-        this.writer = new E57.LibE57.E57Writer(inputFilePath);
+        this._writer = new E57.LibE57.E57Writer(inputFilePath);
         this._toBuffer = toBuffer;
     }
 
@@ -354,9 +419,9 @@ export class E57Writer
      */
     AddImage(image)
     {
-        return Promise.all([image.getBuffer(), image.getMetadata()])
-            .then(([bufferData, meta]) => this.writer.AddImage(
-                image.getHeader(), image.getType(), image.getProjection(),
+        return Promise.all([image.GetBuffer(), image.GetMetadata()])
+            .then(([bufferData, meta]) => this._writer.AddImage(
+                image.GetHeader(), image.GetType(), image.GetProjection(),
                 0, bufferData, bufferData.length, meta.width, meta.height
             ).then(Number));
     }
@@ -368,9 +433,11 @@ export class E57Writer
      * @param {object[]} points     - Array of `Point` objects.
      * @returns {number} Zero-based index assigned to the new scan.
      */
-    AddScanSync(scanHeader, points)
+    AddScanSync(scan)
     {
-        return Number(this.writer.AddScanSync(scanHeader, points));
+        const header = scan.GetHeader();
+        const points = scan.GetPoints();
+        return Number(this._writer.AddScanSync(header, points));
     }
 
     /**
@@ -381,9 +448,11 @@ export class E57Writer
      * @param {object[]} points     - Array of `Point` objects.
      * @returns {Promise<number>} Resolves with the zero-based index assigned to the new scan.
      */
-    AddScan(scanHeader, points)
+    AddScan(scan)
     {
-        return this.writer.AddScan(scanHeader, points).then(Number);
+        const header = scan.GetHeader();
+        const pts    = scan.GetPoints();
+        return this._writer.AddScan(header, pts).then(Number);
     }
 
     /**
@@ -412,8 +481,16 @@ export class E57Writer
      */
     Close()
     {
-        this.writer.Close();
-        if (this._toBuffer)
-            return E57.LibE57.FS.readFile(this._bufferFileMemFSFilePath);
+        if (this._writer)
+        {
+            this._writer.Close();
+            this._writer.delete();
+        }
+        
+        if (this._toBuffer) {
+            const bytes = E57.LibE57.FS.readFile(this._bufferFileMemFSFilePath);
+            E57.LibE57.FS.unlink(this._bufferFileMemFSFilePath);
+            return bytes;
+        }
     }
 }
