@@ -23,7 +23,7 @@ In the browser, file-system access is not available — use `E57Reader.FromBuffe
 Before doing anything, call `E57.Init()` once and wait for it to finish. This loads the underlying WebAssembly module.
 
 ```js
-import { E57, E57Reader, E57Writer } from 'e57-js'
+import { E57, E57Reader, E57Writer, E57WriterScan, E57WriterImage } from 'e57-js'
 
 await E57.Init()
 
