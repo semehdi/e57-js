@@ -102,7 +102,7 @@ console.log(header.width, header.height)
 // Get the image as a byte buffer
 const bytes = await image.ReadImage()  // Uint8Array
 // use bytes...
-image.destroy(bytes)  // free WASM memory when done
+image.Release(bytes)  // free WASM memory when done
 
 // Or save it directly to disk (extension is auto-detected — memory is freed automatically)
 await image.Save('output')   // writes output.jpeg or output.png
@@ -207,9 +207,10 @@ const image = new E57WriterImage(
     E57.LibE57.Image2DType.ImageJPEG,
     E57.LibE57.Image2DProjection.ProjectionVisual
 )
-image.setName('Front camera')
+image.SetName('Front camera')
 
 await writer.AddImage(image)
+image.Destroy()
 ```
 
 In the browser, use `E57WriterImage.FromBuffer` instead:
@@ -221,9 +222,10 @@ const image = E57WriterImage.FromBuffer(
     E57.LibE57.Image2DType.ImageJPEG,
     E57.LibE57.Image2DProjection.ProjectionVisual
 )
-image.setName('Front camera')
+image.SetName('Front camera')
 
 await writer.AddImage(image)
+image.Destroy()
 ```
 
 ### Close the file

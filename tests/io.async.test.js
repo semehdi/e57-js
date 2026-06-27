@@ -82,12 +82,12 @@ describe('SimpleWriter async', () => {
             E57.LibE57.Image2DProjection.ProjectionVisual
         )
 
-        image.setName('Front camera')
-        image.setGuid('Image-GUID-001')
-        image.setRotation(1.0, 0.0, 0.0, 0.0)
-        image.setTrasnlation(1.0, 2.0, 3.0)
+        image.SetName('Front camera')
+        image.SetGuid('Image-GUID-001')
+        image.SetRotation(1.0, 0.0, 0.0, 0.0)
+        image.SetTranslation(1.0, 2.0, 3.0)
 
-        const h = image.getHeader()
+        const h = image.GetHeader()
         h.description                          = 'Test image description'
         h.sensorVendor                         = 'e57-js'
         h.sensorModel                          = 'CamX-9000'
@@ -96,6 +96,7 @@ describe('SimpleWriter async', () => {
         h.setAcquisitionDateTime(1748822400.0, 0)
 
         const bytes = await testsUtils.withKeepAlive(writer.AddImage(image))
+        image.Destroy()
         writer.Close()
 
         const reader = testsUtils.openReader(filePath)
@@ -191,13 +192,19 @@ describe('SimpleWriter async', () => {
                 E57.LibE57.Image2DType.ImageJPEG,
                 E57.LibE57.Image2DProjection.ProjectionVisual
             )
-            img.setName(name)
+            img.SetName(name)
             return img
         }
 
-        await testsUtils.withKeepAlive(writer.AddImage(makeImage('Camera 1')))
-        await testsUtils.withKeepAlive(writer.AddImage(makeImage('Camera 2')))
-        await testsUtils.withKeepAlive(writer.AddImage(makeImage('Camera 3')))
+        const img1 = makeImage('Camera 1')
+        await testsUtils.withKeepAlive(writer.AddImage(img1))
+        img1.Destroy()
+        const img2 = makeImage('Camera 2')
+        await testsUtils.withKeepAlive(writer.AddImage(img2))
+        img2.Destroy()
+        const img3 = makeImage('Camera 3')
+        await testsUtils.withKeepAlive(writer.AddImage(img3))
+        img3.Destroy()
         writer.Close()
 
         const reader = testsUtils.openReader(filePath)
@@ -218,6 +225,7 @@ describe('SimpleWriter async', () => {
         )
 
         const bytes = await testsUtils.withKeepAlive(writer.AddImage(image))
+        image.Destroy()
         writer.Close()
 
         const sourceSize = fs.statSync(IMAGE_PATH).size
@@ -232,9 +240,10 @@ describe('SimpleWriter async', () => {
             E57.LibE57.Image2DType.ImageJPEG,
             E57.LibE57.Image2DProjection.ProjectionVisual
         )
-        image.setName('Rotated camera')
-        image.setRotation(1.0, 0.0, 0.0, 0.0)
+        image.SetName('Rotated camera')
+        image.SetRotation(1.0, 0.0, 0.0, 0.0)
         await testsUtils.withKeepAlive(writer.AddImage(image))
+        image.Destroy()
         writer.Close()
 
         const reader = testsUtils.openReader(filePath)
@@ -260,6 +269,7 @@ describe('SimpleWriter async', () => {
             E57.LibE57.Image2DProjection.ProjectionVisual
         )
         const bytes = await testsUtils.withKeepAlive(writer.AddImage(image))
+        image.Destroy()
         assert.ok(Number(bytes) > 0)
 
         writer.Close()
@@ -314,8 +324,9 @@ describe('SimpleWriter async', () => {
 
         const imgBuf   = new Uint8Array(fs.readFileSync(IMAGE_PATH))
         const image    = E57WriterImage.FromBuffer(imgBuf, E57.LibE57.Image2DType.ImageJPEG, E57.LibE57.Image2DProjection.ProjectionVisual)
-        image.setName('FromBuffer image')
+        image.SetName('FromBuffer image')
         const imageBytes = await testsUtils.withKeepAlive(writer.AddImage(image))
+        image.Destroy()
         assert.ok(Number(imageBytes) > 0)
 
         const buffer = writer.Close()

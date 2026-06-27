@@ -166,13 +166,13 @@ export class E57ReaderImage
     }
 
     /**
-     * Frees the WASM memory backing an image buffer returned by `ReadImageSync` or `ReadImage`.
+     * Releases the WASM memory backing an image buffer returned by `ReadImageSync` or `ReadImage`.
      * Call this once you are done with the buffer to release memory immediately
      * rather than waiting for the garbage collector.
      *
      * @param {Uint8Array} buffer - The buffer previously returned by `ReadImageSync` or `ReadImage`.
      */
-    destroy(buffer)
+    Release(buffer)
     {
         if (buffer && typeof buffer.free === 'function') buffer.free()
     }
