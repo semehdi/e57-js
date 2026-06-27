@@ -245,6 +245,7 @@ export class E57WriterImage
      */
     SetHeader(imgHeader)
     {
+        this._imageHeader.delete();
         this._imageHeader = imgHeader;
     }
 
@@ -302,6 +303,7 @@ export class E57WriterImage
     Destroy()
     {
         this._imageHeader.delete()
+        this._imageHeader = null
         this._buffer = null
     }
 }

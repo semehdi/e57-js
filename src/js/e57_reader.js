@@ -17,16 +17,22 @@ export class E57ReaderScan {
     {
         this.e57Reader = e57Reader;
         this.scanIdx = scanIdx;
+        this._header = e57Reader.GetData3DHeader(scanIdx);
     }
 
     /**
-     * Returns the `Data3D` header for this scan.
+     * Returns the cached `Data3D` header for this scan.
      *
      * @returns {object} `Data3D` struct from libE57Format.
      */
     GetHeader()
     {
-        return this.e57Reader.GetData3DHeader(this.scanIdx);
+        return this._header;
+    }
+
+    Destroy()
+    {
+        this._header.delete();
     }
 
     /**
@@ -36,9 +42,7 @@ export class E57ReaderScan {
      */
     ReadScan(transform = true)
     {
-        var scanHeader = this.GetHeader();
-        var scanPtsCount = scanHeader.pointCount;
-        return this.ReadPoints(scanPtsCount, transform);
+        return this.ReadPoints(Number(this._header.pointCount), transform);
     }
 
     /**
@@ -133,16 +137,22 @@ export class E57ReaderImage
     {
         this._e57Reader = e57Reader;
         this._imageIdx = imageIdx;
+        this._header = e57Reader.GetImage2DHeader(imageIdx);
     }
 
     /**
-     * Returns the `ImageHeader` for this image.
+     * Returns the cached `ImageHeader` for this image.
      *
      * @returns {object} `ImageHeader` struct from libE57Format.
      */
     GetHeader()
     {
-        return this._e57Reader.GetImage2DHeader(this._imageIdx);
+        return this._header;
+    }
+
+    Destroy()
+    {
+        this._header.delete();
     }
 
     /**
@@ -186,7 +196,7 @@ export class E57ReaderImage
     {
         return this.ReadImage().then((imgData) => {
             const base64 = Buffer.from(imgData).toString("base64");
-            this.destroy(imgData);
+            this.Release(imgData);
             return base64;
         });
     }
@@ -234,7 +244,7 @@ export class E57ReaderImage
         const newFilePath = filePath.replace(path.extname(filePath), outExtension);
         return this.ReadImage().then((imgData) => {
             return fs.promises.writeFile(newFilePath, imgData).then(() => {
-                this.destroy(imgData)
+                this.Release(imgData)
             })
         })
     }
@@ -300,7 +310,6 @@ export class E57Reader {
     {
         const memFsFilePath = "/input.e57";
         E57.LibE57.FS.writeFile(memFsFilePath, buffer);
-        console.log("Done ");
         return new E57Reader(memFsFilePath, true);
     }
 
@@ -361,6 +370,8 @@ export class E57Reader {
      */
     Close()
     {
+        for (const scan  of this.scans)  scan.Destroy();
+        for (const image of this.images) image.Destroy();
         this.reader.Close();
         this.reader.delete();
         this.scans  = null;
