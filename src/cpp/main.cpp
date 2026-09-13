@@ -33,9 +33,9 @@ EMSCRIPTEN_BINDINGS(e57) {
         .value("TypeCompressedVector", NodeType::TypeCompressedVector)
         .value("TypeInteger", NodeType::TypeInteger)
         .value("TypeScaledInteger", NodeType::TypeScaledInteger)
-        .value("TypeFloat", NodeType::TypeScaledInteger)
-        .value("TypeString", NodeType::TypeScaledInteger)
-        .value("TypeBlob", NodeType::TypeScaledInteger);
+        .value("TypeFloat", NodeType::TypeFloat)
+        .value("TypeString", NodeType::TypeString)
+        .value("TypeBlob", NodeType::TypeBlob);
 
     enum_<FloatPrecision>("FloatPrecision", enum_value_type::number)
         .value("PrecisionSingle", FloatPrecision::PrecisionSingle)
