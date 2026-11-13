@@ -1,4 +1,5 @@
 import { E57 } from "./e57_init.js"
+import { keepAlive } from "./utils.js"
 
 import path from "path"
 import fs from "fs"
@@ -67,7 +68,7 @@ export class E57ReaderScan {
      */
     ReadPoints(ptsCount, transform = true)
     {
-        return this.e57Reader.ReadScan(this.scanIdx, ptsCount, transform);
+        return keepAlive(this.e57Reader.ReadScan(this.scanIdx, ptsCount, transform));
     }
 
     /**
@@ -168,7 +169,7 @@ export class E57ReaderImage
      */
     ReadImage()
     {
-        return this._e57Reader.ReadImage(this._imageIdx);
+        return keepAlive(this._e57Reader.ReadImage(this._imageIdx));
     }
 
     /**
