@@ -26,7 +26,7 @@ describe('SimpleWriter async', () => {
         const filePath = path.join(OUTPUT_DIR, 'AsyncScan.e57')
         const writer = new E57Writer(filePath)
         const scan = testsUtils.makeScan('Async Scan GUID', 50000)
-        const idx = await testsUtils.withKeepAlive(writer.AddScan(scan))
+        const idx = await writer.AddScan(scan)
         scan.Destroy()
         assert.equal(Number(idx), 0)
         writer.Close()
@@ -37,15 +37,15 @@ describe('SimpleWriter async', () => {
         const filePath = path.join(OUTPUT_DIR, 'AsyncMultipleScans.e57')
         const writer = new E57Writer(filePath)
         const scan1 = testsUtils.makeScan('Async Scan 1 GUID', 8)
-        const idx0 = await testsUtils.withKeepAlive(writer.AddScan(scan1))
+        const idx0 = await writer.AddScan(scan1)
         scan1.Destroy()
 
         const scan2 = testsUtils.makeScan('Async Scan 2 GUID', 8)
-        const idx1 = await testsUtils.withKeepAlive(writer.AddScan(scan2))
+        const idx1 = await writer.AddScan(scan2)
         scan2.Destroy()
 
         const scan3 = testsUtils.makeScan('Async Scan 3 GUID', 8)
-        const idx2 = await testsUtils.withKeepAlive(writer.AddScan(scan3))
+        const idx2 = await writer.AddScan(scan3)
         scan3.Destroy()
 
         assert.equal(Number(idx0), 0)
@@ -60,7 +60,7 @@ describe('SimpleWriter async', () => {
         const filePath = path.join(OUTPUT_DIR, 'AsyncCartesianPoints.e57')
         const writer = new E57Writer(filePath)
         const scan = testsUtils.makeScan('Async 1025 Points GUID', 1025)
-        const idx = await testsUtils.withKeepAlive(writer.AddScan(scan))
+        const idx = await writer.AddScan(scan)
         scan.Destroy()
         assert.equal(Number(idx), 0)
         writer.Close()
@@ -76,7 +76,7 @@ describe('SimpleWriter async', () => {
         scan.GetHeader().pointFields.cartesianYField = true
         scan.GetHeader().pointFields.cartesianZField = true
         scan.GetHeader().cartesianBounds.xMinimum = 0.0
-        const idx = await testsUtils.withKeepAlive(writer.AddScan(scan))
+        const idx = await writer.AddScan(scan)
         scan.Destroy()
         assert.equal(Number(idx), 0)
         writer.Close()
@@ -105,7 +105,7 @@ describe('SimpleWriter async', () => {
         h.associatedData3DGuid                 = 'Scan-GUID-001'
         h.setAcquisitionDateTime(1748822400.0, 0)
 
-        const bytes = await testsUtils.withKeepAlive(writer.AddImage(image))
+        const bytes = await writer.AddImage(image)
         image.Destroy()
         writer.Close()
 
@@ -207,13 +207,13 @@ describe('SimpleWriter async', () => {
         }
 
         const img1 = makeImage('Camera 1')
-        await testsUtils.withKeepAlive(writer.AddImage(img1))
+        await writer.AddImage(img1)
         img1.Destroy()
         const img2 = makeImage('Camera 2')
-        await testsUtils.withKeepAlive(writer.AddImage(img2))
+        await writer.AddImage(img2)
         img2.Destroy()
         const img3 = makeImage('Camera 3')
-        await testsUtils.withKeepAlive(writer.AddImage(img3))
+        await writer.AddImage(img3)
         img3.Destroy()
         writer.Close()
 
@@ -234,7 +234,7 @@ describe('SimpleWriter async', () => {
             E57.LibE57.Image2DProjection.ProjectionVisual
         )
 
-        const bytes = await testsUtils.withKeepAlive(writer.AddImage(image))
+        const bytes = await writer.AddImage(image)
         image.Destroy()
         writer.Close()
 
@@ -252,7 +252,7 @@ describe('SimpleWriter async', () => {
         )
         image.SetName('Rotated camera')
         image.SetRotation(1.0, 0.0, 0.0, 0.0)
-        await testsUtils.withKeepAlive(writer.AddImage(image))
+        await writer.AddImage(image)
         image.Destroy()
         writer.Close()
 
@@ -271,7 +271,7 @@ describe('SimpleWriter async', () => {
         const writer = new E57Writer(filePath)
 
         const scan = testsUtils.makeScan('Combined Scan GUID', 32)
-        const scanIdx = await testsUtils.withKeepAlive(writer.AddScan(scan))
+        const scanIdx = await writer.AddScan(scan)
         scan.Destroy()
         assert.equal(Number(scanIdx), 0)
 
@@ -280,7 +280,7 @@ describe('SimpleWriter async', () => {
             E57.LibE57.Image2DType.ImageJPEG,
             E57.LibE57.Image2DProjection.ProjectionVisual
         )
-        const bytes = await testsUtils.withKeepAlive(writer.AddImage(image))
+        const bytes = await writer.AddImage(image)
         image.Destroy()
         assert.ok(Number(bytes) > 0)
 
@@ -293,14 +293,14 @@ describe('SimpleWriter async', () => {
 
         const h = reader.GetScan(0).GetHeader()
         assert.equal(Number(h.pointCount), 32)
-        const pts = await testsUtils.withKeepAlive(reader.GetScan(0).ReadScan())
+        const pts = await reader.GetScan(0).ReadScan()
         assert.equal(Number(pts.get(0).cartesianX),  0)
         assert.equal(Number(pts.get(31).cartesianX), 31)
         assert.equal(Number(pts.get(31).cartesianY), 31)
         assert.equal(Number(pts.get(31).cartesianZ), 31)
 
         assert.equal(Number(reader.GetImage(0).GetHeader().imageSize), Number(bytes))
-        const imgData = await testsUtils.withKeepAlive(reader.GetImage(0).ReadImage())
+        const imgData = await reader.GetImage(0).ReadImage()
         assert.equal(imgData.byteLength, Number(bytes))
         reader.Close()
     })
@@ -310,7 +310,7 @@ describe('SimpleWriter async', () => {
         const numPoints = 64
         const writer = new E57Writer(filePath)
         const scan = testsUtils.makeScan('ReadScan File GUID', numPoints)
-        await testsUtils.withKeepAlive(writer.AddScan(scan))
+        await writer.AddScan(scan)
         scan.Destroy()
         writer.Close()
 
@@ -320,7 +320,7 @@ describe('SimpleWriter async', () => {
         assert.equal(reader.GetScan(0).GetHeader().guid, 'ReadScan File GUID')
         assert.equal(Number(reader.GetScan(0).GetHeader().pointCount), numPoints)
 
-        const pts = await testsUtils.withKeepAlive(reader.GetScan(0).ReadScan())
+        const pts = await reader.GetScan(0).ReadScan()
         for (let i = 0; i < numPoints; i++) {
             const pt = pts.get(i)
             assert.equal(Number(pt.cartesianX), i)
@@ -335,13 +335,13 @@ describe('SimpleWriter async', () => {
         const writer    = E57Writer.ToBuffer()
 
         const scan = testsUtils.makeScan('FromBuffer Async GUID', numPoints)
-        await testsUtils.withKeepAlive(writer.AddScan(scan))
+        await writer.AddScan(scan)
         scan.Destroy()
 
         const imgBuf   = new Uint8Array(fs.readFileSync(IMAGE_PATH))
         const image    = E57WriterImage.FromBuffer(imgBuf, E57.LibE57.Image2DType.ImageJPEG, E57.LibE57.Image2DProjection.ProjectionVisual)
         image.SetName('FromBuffer image')
-        const imageBytes = await testsUtils.withKeepAlive(writer.AddImage(image))
+        const imageBytes = await writer.AddImage(image)
         image.Destroy()
         assert.ok(Number(imageBytes) > 0)
 
@@ -355,7 +355,7 @@ describe('SimpleWriter async', () => {
         assert.equal(reader.GetScan(0).GetHeader().guid, 'FromBuffer Async GUID')
         assert.equal(Number(reader.GetScan(0).GetHeader().pointCount), numPoints)
 
-        const pts = await testsUtils.withKeepAlive(reader.GetScan(0).ReadScan())
+        const pts = await reader.GetScan(0).ReadScan()
         for (let i = 0; i < numPoints; i++) {
             const pt = pts.get(i)
             assert.equal(Number(pt.cartesianX), i)
@@ -366,7 +366,7 @@ describe('SimpleWriter async', () => {
         assert.equal(Number(reader.GetImage2DCount()), 1)
         assert.equal(reader.GetImage(0).GetHeader().name, 'FromBuffer image')
 
-        const imgData = await testsUtils.withKeepAlive(reader.GetImage(0).ReadImage())
+        const imgData = await reader.GetImage(0).ReadImage()
         assert.equal(imgData.byteLength, Number(imageBytes))
         reader.Close();
     })

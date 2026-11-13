@@ -1,4 +1,5 @@
 import { E57 } from "./e57_init.js"
+import { keepAlive } from "./utils.js"
 
 import path from "path"
 import fs from "fs"
@@ -420,10 +421,10 @@ export class E57Writer
     AddImage(image)
     {
         return Promise.all([image.GetBuffer(), image.GetMetadata()])
-            .then(([bufferData, meta]) => this._writer.AddImage(
+            .then(([bufferData, meta]) => keepAlive(this._writer.AddImage(
                 image.GetHeader(), image.GetType(), image.GetProjection(),
                 0, bufferData, bufferData.length, meta.width, meta.height
-            ).then(Number));
+            )).then(Number));
     }
 
     /**
@@ -452,7 +453,7 @@ export class E57Writer
     {
         const header = scan.GetHeader();
         const pts    = scan.GetPoints();
-        return this._writer.AddScan(header, pts).then(Number);
+        return keepAlive(this._writer.AddScan(header, pts)).then(Number);
     }
 
     /**

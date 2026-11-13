@@ -127,11 +127,3 @@ export function makeScan(guid, count) {
     }
     return scan
 }
-
-// Keeps the event loop alive while a WASM pthread posts its result back to the
-// main thread. Without an active handle, node:test can drain the loop before
-// the worker message arrives, leaving the promise permanently pending.
-export async function withKeepAlive(promise) {
-    const timer = setInterval(() => {}, 50)
-    return promise.finally(() => clearInterval(timer))
-}
